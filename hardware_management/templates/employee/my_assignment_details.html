@@ -1,0 +1,512 @@
+{% extends 'base.html' %}
+{% block title %}Assignment Details - Eduquity Hardware Management{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2><i class="bi bi-clipboard-data"></i> Assignment Details</h2>
+                <p class="text-muted">
+                    Project: <strong>{{ assignment.project.project_name }}</strong> | 
+                    Assignment ID: {{ assignment.assignment_id|slice:"0:8" }}...
+                </p>
+            </div>
+<div class="d-flex justify-content-end gap-2 mb-3">
+    <a href="{% url 'export_assignment_excel' assignment.id %}" class="btn btn-success">
+        <i class="bi bi-file-excel me-2"></i>Export to Excel
+    </a>
+    <a href="{% url 'view_my_assignments' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>Back to Assignments
+    </a>
+</div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header text-white" style="background-color: #E04D00;">
+                <h4 class="mb-0 text-white">
+                    <i class="bi bi-info-circle"></i> Assignment Information
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <th width="40%">Project:</th>
+                                <td>{{ assignment.project.project_name }}</td>
+                            </tr>
+                            <tr>
+                                <th>Project ID:</th>
+                                <td>{{ assignment.project.project_id }}</td>
+                            </tr>
+                            <tr>
+                                <th>Location:</th>
+                                <td>{{ assignment.project.location }}</td>
+                            </tr>
+                            <tr>
+                                <th>Exam City:</th>
+                                <td>
+                                    {% if assignment.exam_city %}
+                                        <span class="badge text-white" style="background-color: #666666;">{{ assignment.exam_city }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Not specified</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <th width="40%">Assigned Date:</th>
+                                <td>{{ assignment.assigned_date|date:"d M Y" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Expected Return:</th>
+                                <td>{{ assignment.expected_return_date|date:"d M Y" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Actual Return:</th>
+                                <td>
+                                    {% if assignment.actual_return_date %}
+                                        {{ assignment.actual_return_date|date:"d M Y" }}
+                                        <span class="badge text-white" style="background-color: #444444;">Returned</span>
+                                    {% else %}
+                                        <span class="badge text-white" style="background-color: #E04D00;">Active</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Assigned By:</th>
+                                <td>{{ assignment.assigned_by.get_full_name|default:assignment.assigned_by.username }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                {% if assignment.notes %}
+                <div class="alert alert-light border mt-3">
+                    <h6><i class="bi bi-sticky" style="color: #E04D00;"></i> Notes:</h6>
+                    <p class="mb-0">{{ assignment.notes }}</p>
+                </div>
+                {% endif %}
+                
+                {% if assignment.exam_city %}
+                <div class="alert mt-3" style="background-color: #f5f5f5; border: 1px solid #ddd;">
+                    <h6><i class="bi bi-geo-alt" style="color: #E04D00;"></i> Exam Information:</h6>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <strong>Hardware Destination:</strong> This hardware is to be used for exams in <strong style="color: #E04D00;">{{ assignment.exam_city }}</strong>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header text-white" style="background-color: #444444;">
+                <h4 class="mb-0 text-white">
+                    <i class="bi bi-laptop"></i> Assigned Hardware Items
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Hardware Type</th>
+                                <th>Model</th>
+                                <th>Entered Serial</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>{{ item.hardware.hardware_type.name }}</td>
+                                <td>{{ item.hardware.model_name }}</td>
+                                <td>
+                                    {% if item.has_serial_entry %}
+                                        <strong>{{ item.serial_number }}</strong>
+                                    {% else %}
+                                        <span class="text-muted">Not entered</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if item.has_serial_entry %}
+                                        {% if item.is_verified %}
+                                            <span class="badge text-white" style="background-color: #444444;">
+                                                <i class="bi bi-check-circle"></i> Verified
+                                            </span>
+                                        {% else %}
+                                            <span class="badge text-white" style="background-color: #666666;">
+                                                <i class="bi bi-clock"></i> Pending
+                                            </span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge text-white" style="background-color: #888888;">
+                                            <i class="bi bi-exclamation-circle"></i> Not Entered
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if not item.is_verified %}
+                                        {% if item.has_serial_entry %}
+                                        <a href="{% url 'edit_serial_numbers' assignment.id %}" 
+                                           class="btn btn-sm text-white" style="background-color: #666666;">
+                                            <i class="bi bi-pencil"></i> Edit
+                                        </a>
+                                        {% else %}
+                                        <a href="{% url 'enter_serial_numbers' assignment.id %}" 
+                                           class="btn btn-sm text-white" style="background-color: #E04D00;">
+                                            <i class="bi bi-upc-scan"></i> Enter
+                                        </a>
+                                        {% endif %}
+                                    {% else %}
+                                        <button class="btn btn-sm btn-outline-secondary" disabled>
+                                            <i class="bi bi-lock"></i> Verified
+                                        </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center py-4">
+                                    <i class="bi bi-laptop display-4 text-muted"></i>
+                                    <h4 class="mt-3">No Hardware Items</h4>
+                                    <p class="text-muted">No hardware items assigned</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                {% if not assignment.actual_return_date and items %}
+                <div class="mt-4">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            {% with items|length as total_items %}
+                            {% with pending_count as pending %}
+                            <div class="alert mb-0" style="background-color: #f5f5f5; border: 1px solid #ddd;">
+                                <i class="bi bi-info-circle" style="color: #E04D00;"></i> 
+                                <strong>Status:</strong> 
+                                {{ total_items }} total items | 
+                                {{ pending }} pending serial entries
+                            </div>
+                            {% endwith %}
+                            {% endwith %}
+                        </div>
+                        <div>
+                            <a href="{% url 'enter_serial_numbers' assignment.id %}" 
+                               class="btn text-white" style="background-color: #E04D00;">
+                                <i class="bi bi-upc-scan"></i> 
+                                {% if pending_count > 0 %}
+                                    Enter Serial Numbers
+                                {% else %}
+                                    Update Serial Numbers
+                                {% endif %}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header text-white" style="background-color: #666666;">
+                <h4 class="mb-0 text-white">
+                    <i class="bi bi-geo-alt"></i> Assignment Overview
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="mb-4">
+                    <h6>Project Information:</h6>
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="bi bi-building me-2" style="color: #E04D00;"></i>
+                        <span>{{ assignment.project.project_name }}</span>
+                    </div>
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="bi bi-geo-alt me-2" style="color: #E04D00;"></i>
+                        <span>{{ assignment.project.location }}</span>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <h6>Exam Information:</h6>
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-pin-map me-2" style="color: #E04D00;"></i>
+                        <div>
+                            <strong>Exam City:</strong>
+                            <div>
+                                {% if assignment.exam_city %}
+                                    <span class="badge text-white" style="background-color: #666666;">{{ assignment.exam_city }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Not specified</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <h6>Assignment Timeline:</h6>
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-marker" style="background-color: #444444;"></div>
+                            <div class="timeline-content">
+                                <small>Assigned</small>
+                                <div>{{ assignment.assigned_date|date:"d M Y" }}</div>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-marker" style="background-color: #666666;"></div>
+                            <div class="timeline-content">
+                                <small>Expected Return</small>
+                                <div>{{ assignment.expected_return_date|date:"d M Y" }}</div>
+                            </div>
+                        </div>
+                        {% if assignment.actual_return_date %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker" style="background-color: #888888;"></div>
+                            <div class="timeline-content">
+                                <small>Returned</small>
+                                <div>{{ assignment.actual_return_date|date:"d M Y" }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header text-white" style="background-color: #888888;">
+                <h4 class="mb-0 text-white">
+                    <i class="bi bi-graph-up"></i> Hardware Status
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <div class="display-4">{{ total_items }}</div>
+                    <p class="text-muted mb-0">Total Hardware Items</p>
+                </div>
+                
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="mb-3">
+                            <div class="h3" style="color: #444444;">
+                                {{ entered_count }}
+                            </div>
+                            <small class="text-muted">Entered</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="mb-3">
+                            <div class="h3" style="color: #888888;">
+                                {{ pending_count }}
+                            </div>
+                            <small class="text-muted">Pending</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="progress mb-3" style="height: 20px;">
+                    {% if total_items > 0 %}
+                        {% if entered_count > 0 %}
+                        <div class="progress-bar" style="background-color: #444444; width: {% widthratio entered_count total_items 100 %}%;">
+                            {{ entered_count }} Entered
+                        </div>
+                        {% endif %}
+                        {% if pending_count > 0 %}
+                        <div class="progress-bar" style="background-color: #888888; width: {% widthratio pending_count total_items 100 %}%;">
+                            {{ pending_count }} Pending
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="progress-bar bg-secondary" style="width: 100%">
+                            No Items
+                        </div>
+                    {% endif %}
+                </div>
+                
+                {% if assignment.exam_city %}
+                <div class="alert" style="background-color: #f5f5f5; border: 1px solid #ddd;">
+                    <h6><i class="bi bi-geo-alt-fill" style="color: #E04D00;"></i> Important:</h6>
+                    <p class="mb-0">
+                        Remember to bring all hardware to <strong style="color: #E04D00;">{{ assignment.exam_city }}</strong> for exam.
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header text-white" style="background-color: #E04D00;">
+                <h4 class="mb-0 text-white">
+                    <i class="bi bi-lightbulb"></i> Instructions
+                </h4>
+            </div>
+            <div class="card-body">
+                <h6>How to Enter Serial Numbers:</h6>
+                <ol class="mb-3">
+                    <li>Locate the serial number on each physical device</li>
+                    <li>Click "Enter Serial" for each item</li>
+                    <li>Type the exact serial number</li>
+                    <li>Submit for manager verification</li>
+                </ol>
+                
+                <div class="alert" style="background-color: #f5f5f5; border: 1px solid #ddd;">
+                    <h6><i class="bi bi-exclamation-circle" style="color: #E04D00;"></i> Important Notes:</h6>
+                    <ul class="mb-0">
+                        <li>Serial numbers must be accurate</li>
+                        <li>Verified serials cannot be edited</li>
+                        <li>Contact manager for corrections</li>
+                        {% if assignment.exam_city %}
+                        <li><strong>Bring hardware to <span style="color: #E04D00;">{{ assignment.exam_city }}</span> for exam</strong></li>
+                        {% endif %}
+                        <li>Return hardware before due date</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .table-borderless th {
+        font-weight: 600;
+        color: #000000;
+    }
+    
+    code {
+        background-color: #f8f9fa;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 0.9em;
+        color: #000000;
+    }
+    
+    .progress {
+        border-radius: 10px;
+        overflow: hidden;
+        background-color: #e9ecef;
+    }
+    
+    .progress-bar {
+        font-size: 0.8rem;
+        line-height: 20px;
+        color: white;
+    }
+    
+    .timeline {
+        position: relative;
+        padding-left: 20px;
+    }
+    
+    .timeline:before {
+        content: '';
+        position: absolute;
+        left: 8px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background-color: #ddd;
+    }
+    
+    .timeline-item {
+        position: relative;
+        margin-bottom: 15px;
+    }
+    
+    .timeline-marker {
+        position: absolute;
+        left: -21px;
+        top: 5px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        border: 2px solid white;
+    }
+    
+    .timeline-content {
+        margin-left: 0;
+    }
+    
+    .timeline-content small {
+        color: #666666;
+        font-size: 0.8rem;
+    }
+    
+    .timeline-content div {
+        color: #000000;
+    }
+    
+    .btn {
+        transition: all 0.3s ease;
+    }
+    
+    .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .btn[style*="background-color: #E04D00;"]:hover {
+        background-color: #c44500 !important;
+    }
+    
+    .btn[style*="background-color: #666666;"]:hover {
+        background-color: #555555 !important;
+    }
+    
+    .card-header {
+        border-bottom: none;
+    }
+    
+    .badge {
+        font-weight: 500;
+    }
+    
+    .alert {
+        color: #000000;
+    }
+    
+    h1, h2, h3, h4, h5, h6, p, .card, .table, .list-group {
+        color: #000000;
+    }
+    
+    .text-muted {
+        color: #666666 !important;
+    }
+    
+    .text-primary {
+        color: #E04D00 !important;
+    }
+    
+    .bg-primary {
+        background-color: #E04D00 !important;
+    }
+    
+    .btn-primary {
+        background-color: #E04D00;
+        border-color: #E04D00;
+    }
+    
+    .btn-primary:hover {
+        background-color: #c44500;
+        border-color: #c44500;
+    }
+</style>
+{% endblock %}

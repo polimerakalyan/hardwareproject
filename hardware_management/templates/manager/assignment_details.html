@@ -1,0 +1,411 @@
+{% extends 'base.html' %}
+{% block title %}Assignment Details - Eduquity Hardware Management{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2><i class="bi bi-clipboard-data"></i> Assignment Details</h2>
+                <p class="text-muted">
+                    Assignment ID: {{ assignment.assignment_id|slice:"0:8" }}... | 
+                    Employee: {{ assignment.employee.get_full_name|default:assignment.employee.username }}
+                    {% if assignment.exam_city %}
+                    | <span class="text-info"><i class="bi bi-geo-alt"></i> Exam City: {{ assignment.exam_city }}</span>
+                    {% endif %}
+                </p>
+            </div>
+            <div>
+                <a href="{% url 'view_assignments' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Assignments
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-info-circle"></i> Assignment Information
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <th width="40%">Employee:</th>
+                                <td>{{ assignment.employee.get_full_name|default:assignment.employee.username }}</td>
+                            </tr>
+                            <tr>
+                                <th>Email:</th>
+                                <td>{{ assignment.employee.email }}</td>
+                            </tr>
+                            <tr>
+                                <th>Phone:</th>
+                                <td>{{ assignment.employee.phone|default:"-" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Project:</th>
+                                <td>{{ assignment.project.project_name }}</td>
+                            </tr>
+                            <tr>
+                                <th>Exam City:</th>
+                                <td>
+                                    {% if assignment.exam_city %}
+                                        <span class="badge bg-info">
+                                            <i class="bi bi-geo-alt"></i> {{ assignment.exam_city }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">Not specified</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <th width="40%">Project ID:</th>
+                                <td>{{ assignment.project.project_id }}</td>
+                            </tr>
+                            <tr>
+                                <th>Project Location:</th>
+                                <td>{{ assignment.project.location }}</td>
+                            </tr>
+                            <tr>
+                                <th>Assigned Date:</th>
+                                <td>{{ assignment.assigned_date|date:"d M Y" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Return Date:</th>
+                                <td>
+                                    {% if assignment.actual_return_date %}
+                                        {{ assignment.actual_return_date|date:"d M Y" }}
+                                        <span class="badge bg-success ms-2">Returned</span>
+                                    {% else %}
+                                        {{ assignment.expected_return_date|date:"d M Y" }}
+                                        <span class="badge bg-warning">Expected</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                {% if assignment.exam_city %}
+                <div class="alert alert-info border-0 mt-3">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-info bg-opacity-25 p-3 rounded-circle me-3">
+                            <i class="bi bi-building fs-4 text-info"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-1"><i class="bi bi-geo-alt"></i> Exam Duty Assignment</h5>
+                            <p class="mb-0">
+                                This hardware is assigned for exam duty in <strong>{{ assignment.exam_city }}</strong>.
+                                Employee will be stationed at this location for the examination period.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if assignment.notes %}
+                <div class="alert alert-light border mt-3">
+                    <h6><i class="bi bi-sticky"></i> Notes:</h6>
+                    <p class="mb-0">{{ assignment.notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-laptop"></i> Assigned Hardware Items
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Hardware Type</th>
+                                <th>Model</th>
+                                <th>Serial Number</th>
+                                <th>Entered Serial</th>
+                                <th>Status</th>
+                                <th>Verification</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>{{ item.hardware.hardware_type.name }}</td>
+                                <td>{{ item.hardware.model_name }}</td>
+                                <td>
+                                    <code>{{ item.hardware.serial_number }}</code>
+                                </td>
+                                <td>
+                                    {% if item.has_serial_entry %}
+                                        <strong>{{ item.serial_entry.serial_number }}</strong>
+                                    {% else %}
+                                        <span class="text-muted">Not entered</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ item.hardware.status|yesno:'warning,success,info,danger,secondary' }}">
+                                        {{ item.hardware.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if item.has_serial_entry %}
+                                        {% if item.serial_entry.verified %}
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-check-circle"></i> Verified
+                                            </span>
+                                            <br>
+                                            <small class="text-muted">
+                                                by {{ item.serial_entry.verified_by.username }}
+                                            </small>
+                                        {% else %}
+                                            <span class="badge bg-warning">
+                                                <i class="bi bi-clock"></i> Pending
+                                            </span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge bg-danger">
+                                            <i class="bi bi-exclamation-circle"></i> Not Entered
+                                        </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center py-4">
+                                    <i class="bi bi-laptop display-4 text-muted"></i>
+                                    <h4 class="mt-3">No Hardware Items</h4>
+                                    <p class="text-muted">No hardware items assigned</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-md-4 text-center">
+                        <div class="h4">{{ items|length }}</div>
+                        <small class="text-muted">Total Items</small>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <div class="h4 text-success">{{ items|length|add:"0" }}</div>
+                        <small class="text-muted">Verified</small>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <div class="h4 text-warning">{{ items|length|add:"0" }}</div>
+                        <small class="text-muted">Pending</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header bg-warning text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-gear"></i> Actions
+                </h4>
+            </div>
+            <div class="card-body">
+                {% if not assignment.actual_return_date %}
+                <a href="{% url 'return_assignment' assignment.id %}" class="btn btn-success w-100 mb-3">
+                    <i class="bi bi-check-circle"></i> Mark as Returned
+                </a>
+                {% else %}
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle"></i>
+                    <strong>Assignment Returned</strong><br>
+                    Returned on: {{ assignment.actual_return_date|date:"d M Y" }}
+                </div>
+                {% endif %}
+                
+                <div class="list-group">
+                    <a href="{% url 'view_serial_entries' %}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-upc-scan"></i> View Serial Entries
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action">
+                        <i class="bi bi-printer"></i> Print Assignment
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action">
+                        <i class="bi bi-envelope"></i> Email Employee
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        {% if assignment.exam_city %}
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-building"></i> Exam City Details
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <div class="bg-info bg-opacity-10 p-4 rounded-circle d-inline-block">
+                        <i class="bi bi-geo-alt fs-1 text-info"></i>
+                    </div>
+                    <h4 class="mt-3">{{ assignment.exam_city }}</h4>
+                    <span class="badge bg-primary">Exam Duty Location</span>
+                </div>
+                
+                <div class="mt-3">
+                    <h6><i class="bi bi-info-circle"></i> Assignment Purpose:</h6>
+                    <p class="text-muted">
+                        Hardware assigned for examination duties in {{ assignment.exam_city }}.
+                        Employee is required to report to this location with the assigned equipment.
+                    </p>
+                </div>
+                
+                <hr>
+                
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <small class="text-muted">Assigned Date</small>
+                        <div class="fw-bold">{{ assignment.assigned_date|date:"d M Y" }}</div>
+                    </div>
+                    <div>
+                        <small class="text-muted">Expected Return</small>
+                        <div class="fw-bold">{{ assignment.expected_return_date|date:"d M Y" }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-clock-history"></i> Assignment Timeline
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-success"></div>
+                        <div class="timeline-content">
+                            <h6>Assignment Created</h6>
+                            <small class="text-muted">{{ assignment.assigned_date|date:"d M Y H:i" }}</small>
+                        </div>
+                    </div>
+                    
+                    {% if assignment.exam_city %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-info"></div>
+                        <div class="timeline-content">
+                            <h6>Exam City Specified</h6>
+                            <small class="text-muted">{{ assignment.assigned_date|date:"d M Y" }}</small>
+                            <br>
+                            <small>{{ assignment.exam_city }}</small>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% for item in items %}
+                        {% if item.has_serial_entry %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-info"></div>
+                            <div class="timeline-content">
+                                <h6>Serial Entered</h6>
+                                <small class="text-muted">{{ item.serial_entry.entered_at|date:"d M Y H:i" }}</small>
+                                <br>
+                                <small>{{ item.hardware.hardware_type.name }}</small>
+                            </div>
+                        </div>
+                        
+                        {% if item.serial_entry.verified %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-primary"></div>
+                            <div class="timeline-content">
+                                <h6>Serial Verified</h6>
+                                <small class="text-muted">{{ item.serial_entry.verified_at|date:"d M Y H:i" }}</small>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if assignment.actual_return_date %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-warning"></div>
+                        <div class="timeline-content">
+                            <h6>Assignment Returned</h6>
+                            <small class="text-muted">{{ assignment.actual_return_date|date:"d M Y" }}</small>
+                            <br>
+                            <small>Returned from {{ assignment.exam_city|default:"exam duty" }}</small>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .table-borderless th {
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    code {
+        background-color: #f8f9fa;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 0.9em;
+    }
+    
+    .timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+    
+    .timeline-item {
+        position: relative;
+        margin-bottom: 20px;
+    }
+    
+    .timeline-marker {
+        position: absolute;
+        left: -30px;
+        top: 0;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+    }
+    
+    .timeline-content {
+        padding-bottom: 10px;
+        border-left: 2px solid #e9ecef;
+        padding-left: 15px;
+    }
+    
+    .timeline-item:last-child .timeline-content {
+        border-left: none;
+    }
+    
+    .bg-opacity-10 {
+        --bs-bg-opacity: 0.1;
+    }
+    .bg-opacity-25 {
+        --bs-bg-opacity: 0.25;
+    }
+</style>
+{% endblock %}

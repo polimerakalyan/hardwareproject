@@ -1,0 +1,748 @@
+{% extends 'base.html' %}
+{% block title %}Serial Entries - Eduquity Hardware Management{% endblock %}
+
+{% block page_title %}Serial Number Verification{% endblock %}
+{% block page_subtitle %}Employee-wise hardware verification status - Match status shown before verification{% endblock %}
+
+{% block content %}
+<!-- Export Button and Actions -->
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <a href="{% url 'export_employees_hardware' %}" class="btn btn-success">
+            <i class="bi bi-file-excel me-2"></i>Export All Employees Hardware
+        </a>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'manager_verification_status' %}" class="btn btn-outline-primary">
+            <i class="bi bi-shield-check me-2"></i>Verification Dashboard
+        </a>
+        <a href="{% url 'view_assignments' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Back
+        </a>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+        <div class="stat-card stat-card-primary">
+            <div class="stat-icon">
+                <i class="bi bi-people"></i>
+            </div>
+            <div class="stat-info">
+                <h3 class="stat-value">{{ total_assignments }}</h3>
+                <p class="stat-label">Active Employees</p>
+            </div>
+            <div class="stat-progress">
+                <div class="progress-bar" style="width: 100%"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+        <div class="stat-card stat-card-success">
+            <div class="stat-icon">
+                <i class="bi bi-check-circle"></i>
+            </div>
+            <div class="stat-info">
+                <h3 class="stat-value">{{ total_verified }}</h3>
+                <p class="stat-label">Verified</p>
+            </div>
+            <div class="stat-progress">
+                <div class="progress-bar" style="width: {% widthratio total_verified total_assignments 100 %}%"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+        <div class="stat-card stat-card-info">
+            <div class="stat-icon">
+                <i class="bi bi-check2"></i>
+            </div>
+            <div class="stat-info">
+                <h3 class="stat-value">{{ total_matched }}</h3>
+                <p class="stat-label">Matched</p>
+            </div>
+            <div class="stat-progress">
+                <div class="progress-bar" style="width: {% widthratio total_matched total_assignments 100 %}%"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+        <div class="stat-card stat-card-danger">
+            <div class="stat-icon">
+                <i class="bi bi-x-circle"></i>
+            </div>
+            <div class="stat-info">
+                <h3 class="stat-value">{{ total_mismatch }}</h3>
+                <p class="stat-label">Not Matched</p>
+            </div>
+            <div class="stat-progress">
+                <div class="progress-bar" style="width: {% widthratio total_mismatch total_assignments 100 %}%"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+        <div class="stat-card stat-card-secondary">
+            <div class="stat-icon">
+                <i class="bi bi-clock"></i>
+            </div>
+            <div class="stat-info">
+                <h3 class="stat-value">{{ total_pending }}</h3>
+                <p class="stat-label">Pending</p>
+            </div>
+            <div class="stat-progress">
+                <div class="progress-bar" style="width: {% widthratio total_pending total_assignments 100 %}%"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Employee Verification Summary Table -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-gradient-primary text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-semibold">
+            <i class="bi bi-people me-2"></i>Employee Verification Summary
+        </h5>
+        <span class="badge bg-light text-dark rounded-pill px-3 py-2">
+            Total Assignments: {{ assignments|length }}
+        </span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="px-3 py-3">Employee</th>
+                        <th class="py-3">Exam City</th>
+                        <th class="py-3">Assigned Date</th>
+                        <th class="py-3">Hardware</th>
+                        <th class="py-3" style="min-width: 200px;">Progress</th>
+                        <th class="py-3">Status Summary</th>
+                        <th class="px-3 py-3 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for assignment in assignments %}
+                    <tr>
+                        <td class="px-3">
+                            <div class="d-flex align-items-center">
+                                <div class="employee-avatar rounded-circle me-2">
+                                    <span class="fw-bold">{{ assignment.employee.get_full_name|default:assignment.employee.username|first|upper }}</span>
+                                </div>
+                                <div>
+                                    <strong>{{ assignment.employee.get_full_name|default:assignment.employee.username }}</strong>
+                                    <br>
+                                    <small class="text-muted">{{ assignment.employee.email }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-info text-white px-3 py-2">
+                                <i class="bi bi-geo-alt me-1"></i>{{ assignment.exam_city }}
+                            </span>
+                        </td>
+                        <td>
+                            <small>{{ assignment.assigned_date|date:"d/m/Y" }}</small>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary rounded-pill px-3 py-2">{{ assignment.total_items }} Items</span>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="progress flex-grow-1" style="height: 8px;">
+                                    {% if assignment.verified_count > 0 %}
+                                    <div class="progress-bar bg-success" 
+                                         style="width: {% widthratio assignment.verified_count assignment.total_items 100 %}%"
+                                         title="Verified: {{ assignment.verified_count }}">
+                                    </div>
+                                    {% endif %}
+                                    {% if assignment.matched_count > 0 %}
+                                    <div class="progress-bar bg-info" 
+                                         style="width: {% widthratio assignment.matched_count assignment.total_items 100 %}%"
+                                         title="Matched: {{ assignment.matched_count }}">
+                                    </div>
+                                    {% endif %}
+                                    {% if assignment.mismatch_count > 0 %}
+                                    <div class="progress-bar bg-danger" 
+                                         style="width: {% widthratio assignment.mismatch_count assignment.total_items 100 %}%"
+                                         title="Mismatch: {{ assignment.mismatch_count }}">
+                                    </div>
+                                    {% endif %}
+                                    {% if assignment.pending_count > 0 %}
+                                    <div class="progress-bar bg-secondary" 
+                                         style="width: {% widthratio assignment.pending_count assignment.total_items 100 %}%"
+                                         title="Pending: {{ assignment.pending_count }}">
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <small class="fw-semibold">{% widthratio assignment.verified_count assignment.total_items 100 %}%</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex gap-1 flex-wrap">
+                                {% if assignment.verified_count > 0 %}
+                                <span class="badge bg-success" title="Verified by manager">
+                                    <i class="bi bi-check-circle me-1"></i>{{ assignment.verified_count }}
+                                </span>
+                                {% endif %}
+                                {% if assignment.matched_count > 0 %}
+                                <span class="badge bg-info" title="Serials match - Ready to verify">
+                                    <i class="bi bi-check2 me-1"></i>{{ assignment.matched_count }}
+                                </span>
+                                {% endif %}
+                                {% if assignment.mismatch_count > 0 %}
+                                <span class="badge bg-danger" title="Serial numbers don't match">
+                                    <i class="bi bi-x-circle me-1"></i>{{ assignment.mismatch_count }}
+                                </span>
+                                {% endif %}
+                                {% if assignment.pending_count > 0 %}
+                                <span class="badge bg-secondary" title="No serial entered yet">
+                                    <i class="bi bi-clock me-1"></i>{{ assignment.pending_count }}
+                                </span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="px-3 text-center">
+                            <div class="btn-group" role="group">
+                                {% if assignment.matched_count > 0 %}
+                                <a href="{% url 'verify_all_employee_entries' assignment.id %}" 
+                                   class="btn btn-sm {% if assignment.mismatch_count == 0 and assignment.pending_count == 0 %}btn-success{% else %}btn-warning{% endif %}"
+                                   title="Verify matched items"
+                                   onclick="return confirm('Verify {{ assignment.matched_count }} matched item(s) for {{ assignment.employee.get_full_name|default:assignment.employee.username }}?')">
+                                    <i class="bi bi-check-all me-1"></i>
+                                    {% if assignment.mismatch_count == 0 and assignment.pending_count == 0 %}
+                                        Verify All
+                                    {% else %}
+                                        Verify ({{ assignment.matched_count }})
+                                    {% endif %}
+                                </a>
+                                {% endif %}
+                                <button type="button" 
+                                        class="btn btn-sm btn-outline-primary" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#assignmentModal{{ assignment.id }}"
+                                        title="View Hardware Items">
+                                    <i class="bi bi-eye me-1"></i>Details
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5">
+                            <div class="empty-state">
+                                <i class="bi bi-upc-scan display-1 text-muted"></i>
+                                <h5 class="mt-3 text-muted">No Serial Entries Found</h5>
+                                <p class="text-muted mb-0">Employees will enter serial numbers after receiving hardware assignments.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modals for each assignment -->
+{% for assignment in assignments %}
+<div class="modal fade" id="assignmentModal{{ assignment.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-gradient-primary text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-laptop me-2"></i>Hardware Items - {{ assignment.employee.get_full_name|default:assignment.employee.username }}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <!-- Assignment Info Cards -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <div class="info-card">
+                            <div class="info-icon">
+                                <i class="bi bi-person"></i>
+                            </div>
+                            <div class="info-content">
+                                <small class="text-muted">Employee</small>
+                                <strong>{{ assignment.employee.get_full_name|default:assignment.employee.username }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="info-card">
+                            <div class="info-icon">
+                                <i class="bi bi-geo-alt"></i>
+                            </div>
+                            <div class="info-content">
+                                <small class="text-muted">Exam City</small>
+                                <strong>{{ assignment.exam_city }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="info-card">
+                            <div class="info-icon">
+                                <i class="bi bi-calendar"></i>
+                            </div>
+                            <div class="info-content">
+                                <small class="text-muted">Assigned Date</small>
+                                <strong>{{ assignment.assigned_date|date:"d M Y" }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="info-card">
+                            <div class="info-icon">
+                                <i class="bi bi-calendar-check"></i>
+                            </div>
+                            <div class="info-content">
+                                <small class="text-muted">Expected Return</small>
+                                <strong>{{ assignment.expected_return_date|date:"d M Y" }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Status Badges -->
+                <div class="d-flex gap-2 mb-4 flex-wrap">
+                    <span class="status-badge status-verified">
+                        <i class="bi bi-check-circle me-1"></i>Verified: {{ assignment.verified_count }}
+                    </span>
+                    <span class="status-badge status-matched">
+                        <i class="bi bi-check2 me-1"></i>Matched: {{ assignment.matched_count }}
+                    </span>
+                    <span class="status-badge status-mismatch">
+                        <i class="bi bi-x-circle me-1"></i>Mismatch: {{ assignment.mismatch_count }}
+                    </span>
+                    <span class="status-badge status-pending">
+                        <i class="bi bi-clock me-1"></i>Pending: {{ assignment.pending_count }}
+                    </span>
+                </div>
+                
+                <!-- Hardware Items Table -->
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th style="width: 40px;">#</th>
+                                <th>Hardware Type</th>
+                                <th>Model</th>
+                                <th>Expected Serial</th>
+                                <th>Entered Serial</th>
+                                <th>Entered By</th>
+                                <th>Entered On</th>
+                                <th>Status</th>
+                                <th style="width: 100px;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in assignment.serial_entries %}
+                            <tr class="
+                                {% if entry.verified %}table-row-verified
+                                {% elif entry.is_match and entry.serial_number %}table-row-matched
+                                {% elif entry.serial_number and not entry.is_match %}table-row-mismatch
+                                {% endif %}">
+                                <td>{{ forloop.counter }}</td>
+                                <td><strong>{{ entry.hardware_type }}</strong></td>
+                                <td>{{ entry.model }}</td>
+                                <td><code class="serial-badge">{{ entry.expected_serial }}</code></td>
+                                <td>
+                                    {% if entry.serial_number %}
+                                        <code class="serial-badge {% if entry.is_match %}text-success{% else %}text-danger{% endif %}">
+                                            {{ entry.serial_number }}
+                                        </code>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                    </td>
+                                <td>
+                                    {% if entry.entered_by %}
+                                        <small>{{ entry.entered_by.get_full_name|default:entry.entered_by.username }}</small>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if entry.entered_at %}
+                                        <small>{{ entry.entered_at|date:"d/m/y H:i" }}</small>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if entry.verified %}
+                                        <span class="badge bg-success">Verified</span>
+                                    {% elif entry.is_match and entry.serial_number %}
+                                        <span class="badge bg-info">Matched</span>
+                                    {% elif entry.serial_number %}
+                                        <span class="badge bg-danger">Mismatch</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Pending</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-1">
+                                        {% if entry.serial_number and not entry.verified %}
+                                            {% if entry.is_match %}
+                                            <a href="{% url 'verify_serial_entry' entry.id %}" 
+                                               class="btn btn-sm btn-success" title="Verify">
+                                                <i class="bi bi-check-circle"></i>
+                                            </a>
+                                            {% endif %}
+                                            <button class="btn btn-sm btn-outline-info" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#itemModal{{ entry.id }}"
+                                                    title="View Details">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Item Detail Modals -->
+{% for entry in assignment.serial_entries %}
+{% if entry.serial_number %}
+<div class="modal fade" id="itemModal{{ entry.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header {% if entry.verified %}bg-success{% elif entry.is_match %}bg-info{% else %}bg-danger{% endif %} text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-info-circle me-2"></i>Serial Entry Details
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="text-center mb-4">
+                    <div class="serial-display">
+                        <code class="display-6">{{ entry.serial_number }}</code>
+                    </div>
+                    <span class="badge {% if entry.verified %}bg-success{% elif entry.is_match %}bg-info{% else %}bg-danger{% endif %} mt-3 px-4 py-2">
+                        {% if entry.verified %}
+                            <i class="bi bi-check-circle me-1"></i>Verified
+                        {% elif entry.is_match %}
+                            <i class="bi bi-check2 me-1"></i>Matched - Ready to Verify
+                        {% else %}
+                            <i class="bi bi-x-circle me-1"></i>Mismatch
+                        {% endif %}
+                    </span>
+                </div>
+                
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="detail-card">
+                            <small class="text-muted">Employee</small>
+                            <div class="fw-semibold">{{ assignment.employee.get_full_name|default:assignment.employee.username }}</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="detail-card">
+                            <small class="text-muted">Exam City</small>
+                            <div class="fw-semibold">{{ assignment.exam_city }}</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="detail-card">
+                            <small class="text-muted">Hardware</small>
+                            <div class="fw-semibold">{{ entry.hardware_type }} - {{ entry.model }}</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="detail-card">
+                            <small class="text-muted">Expected Serial</small>
+                            <code>{{ entry.expected_serial }}</code>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="detail-card">
+                            <small class="text-muted">Entered By</small>
+                            <div class="fw-semibold">{{ entry.entered_by.get_full_name|default:entry.entered_by.username }}</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="detail-card">
+                            <small class="text-muted">Entered On</small>
+                            <div>{{ entry.entered_at|date:"d M Y H:i" }}</div>
+                        </div>
+                    </div>
+                    {% if entry.verified %}
+                    <div class="col-6">
+                        <div class="detail-card">
+                            <small class="text-muted">Verified By</small>
+                            <div class="fw-semibold">{{ entry.verified_by.get_full_name|default:entry.verified_by.username }}</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="detail-card">
+                            <small class="text-muted">Verified On</small>
+                            <div>{{ entry.verified_at|date:"d M Y H:i" }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mt-4">
+                    {% if not entry.verified %}
+                        {% if entry.is_match %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-check2-circle me-2"></i> This serial number matches and is ready for verification.
+                        </div>
+                        {% else %}
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i> The entered serial number does not match the expected serial.
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="alert alert-success">
+                            <i class="bi bi-check-circle-fill me-2"></i> This serial number has been verified.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                {% if entry.serial_number and not entry.verified and entry.is_match %}
+                <a href="{% url 'verify_serial_entry' entry.id %}" class="btn btn-success px-4">
+                    <i class="bi bi-check-circle me-2"></i>Verify Now
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+{% endfor %}
+
+<style>
+    /* Stat Cards */
+    .stat-card {
+        background: white;
+        border-radius: 16px;
+        padding: 20px;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        border: 1px solid rgba(0,0,0,0.05);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+    }
+    
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        margin-bottom: 12px;
+    }
+    
+    .stat-card-primary .stat-icon { background: rgba(13, 110, 253, 0.1); color: #0d6efd; }
+    .stat-card-success .stat-icon { background: rgba(25, 135, 84, 0.1); color: #198754; }
+    .stat-card-info .stat-icon { background: rgba(13, 202, 240, 0.1); color: #0dcaf0; }
+    .stat-card-danger .stat-icon { background: rgba(220, 53, 69, 0.1); color: #dc3545; }
+    .stat-card-secondary .stat-icon { background: rgba(108, 117, 125, 0.1); color: #6c757d; }
+    
+    .stat-value {
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 4px;
+    }
+    
+    .stat-label {
+        font-size: 13px;
+        color: #6c757d;
+        margin-bottom: 0;
+    }
+    
+    .stat-progress {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: rgba(0,0,0,0.05);
+    }
+    
+    .stat-progress .progress-bar { height: 100%; border-radius: 0; }
+    .stat-card-primary .progress-bar { background: #0d6efd; }
+    .stat-card-success .progress-bar { background: #198754; }
+    .stat-card-info .progress-bar { background: #0dcaf0; }
+    .stat-card-danger .progress-bar { background: #dc3545; }
+    .stat-card-secondary .progress-bar { background: #6c757d; }
+    
+    /* Card Headers */
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+    }
+    
+    /* Employee Avatar */
+    .employee-avatar {
+        width: 36px;
+        height: 36px;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+    }
+    
+    /* Info Cards */
+    .info-card {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 12px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .info-icon {
+        width: 40px;
+        height: 40px;
+        background: white;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #0d6efd;
+        font-size: 20px;
+    }
+    
+    .info-content {
+        flex: 1;
+    }
+    
+    .info-content small {
+        font-size: 11px;
+    }
+    
+    /* Status Badges */
+    .status-badge {
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: 500;
+        font-size: 13px;
+    }
+    
+    .status-verified { background: rgba(25, 135, 84, 0.1); color: #198754; }
+    .status-matched { background: rgba(13, 202, 240, 0.1); color: #0dcaf0; }
+    .status-mismatch { background: rgba(220, 53, 69, 0.1); color: #dc3545; }
+    .status-pending { background: rgba(108, 117, 125, 0.1); color: #6c757d; }
+    
+    /* Table Row Styles */
+    .table-row-verified { background-color: rgba(25, 135, 84, 0.05); }
+    .table-row-matched { background-color: rgba(13, 202, 240, 0.05); }
+    .table-row-mismatch { background-color: rgba(220, 53, 69, 0.05); }
+    
+    /* Serial Badge */
+    .serial-badge {
+        background: #f8f9fa;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-family: monospace;
+        font-size: 13px;
+    }
+    
+    /* Serial Display */
+    .serial-display {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 12px;
+        display: inline-block;
+    }
+    
+    /* Detail Card */
+    .detail-card {
+        background: #f8f9fa;
+        padding: 12px;
+        border-radius: 10px;
+    }
+    
+    /* Empty State */
+    .empty-state {
+        padding: 40px 20px;
+    }
+    
+    /* Table */
+    .table th {
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #6c757d;
+    }
+    
+    .table td {
+        vertical-align: middle;
+        padding: 12px 8px;
+    }
+    
+    /* Button Styles */
+    .btn-group .btn {
+        margin: 0 2px;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .stat-card { padding: 15px; }
+        .stat-value { font-size: 22px; }
+        .stat-icon { width: 40px; height: 40px; font-size: 20px; }
+        .info-card { padding: 8px; }
+        .info-icon { width: 32px; height: 32px; font-size: 16px; }
+        .table td, .table th { padding: 8px 4px; font-size: 12px; }
+        .btn-group .btn { padding: 0.2rem 0.4rem; font-size: 12px; }
+    }
+    
+    /* Dark Mode Support */
+    [data-theme="dark"] .stat-card,
+    [data-theme="dark"] .info-card,
+    [data-theme="dark"] .detail-card,
+    [data-theme="dark"] .serial-display,
+    [data-theme="dark"] .serial-badge {
+        background: var(--card-bg);
+        border-color: var(--border-color);
+    }
+    
+    [data-theme="dark"] .stat-label,
+    [data-theme="dark"] .text-muted {
+        color: var(--gray);
+    }
+    
+    [data-theme="dark"] .bg-light {
+        background-color: var(--light) !important;
+    }
+</style>
+
+<script>
+    $(document).ready(function() {
+        // Auto-refresh every 30 seconds (optional - can be removed)
+        // setInterval(function() {
+        //     location.reload();
+        // }, 30000);
+        
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,826 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Auto Verification - Eduquity Hardware Management{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <div>
+                <h2><i class="bi bi-cloud-upload"></i> Auto Verification</h2>
+                <p class="text-muted">Upload employee-generated Excel files for bulk verification</p>
+            </div>
+            <div class="mt-2 mt-sm-0">
+                <a href="{% url 'view_serial_entries' %}" class="btn btn-outline-primary me-2">
+                    <i class="bi bi-list-check"></i> Manual Verification
+                </a>
+                <a href="{% url 'manager_verification_status' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card border-0 shadow-sm bg-info bg-opacity-10">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-info-circle"></i> How Auto Verification Works
+                </h5>
+                <div class="row mt-3">
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-primary rounded-circle p-3 me-3" style="width: 50px; height: 50px;">1</span>
+                            <div>
+                                <strong>Employee Generates File</strong>
+                                <p class="text-muted mb-0">Employee downloads Excel with their serial entries</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-primary rounded-circle p-3 me-3" style="width: 50px; height: 50px;">2</span>
+                            <div>
+                                <strong>You Upload Here</strong>
+                                <p class="text-muted mb-0">Upload the file using the form below</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-primary rounded-circle p-3 me-3" style="width: 50px; height: 50px;">3</span>
+                            <div>
+                                <strong>Auto Verification</strong>
+                                <p class="text-muted mb-0">System verifies and updates status automatically</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-primary bg-opacity-10">
+            <div class="card-body text-center">
+                <h3 class="text-primary">{{ recent_assignments|length }}</h3>
+                <p class="text-muted mb-0">Active Assignments</p>
+                <small class="text-muted">Ready for verification</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-success bg-opacity-10">
+            <div class="card-body text-center">
+                <h3 class="text-success" id="totalVerified">0</h3>
+                <p class="text-muted mb-0">Verified Today</p>
+                <small class="text-muted">Auto-verified items</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-warning bg-opacity-10">
+            <div class="card-body text-center">
+                <h3 class="text-warning" id="totalPending">0</h3>
+                <p class="text-muted mb-0">Pending</p>
+                <small class="text-muted">Awaiting verification</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-info bg-opacity-10">
+            <div class="card-body text-center">
+                <h3 class="text-info" id="totalFiles">0</h3>
+                <p class="text-muted mb-0">Files Processed</p>
+                <small class="text-muted">This session</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-file-earmark-excel"></i> Upload Verification File
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-file-earmark"></i>
+                    <strong>Expected filename format:</strong> 
+                    <code>examcity_employeename_date.xlsx</code>
+                    <br>
+                    <small class="text-muted">Example: <code>Mumbai_John_Doe_20250218.xlsx</code></small>
+                </div>
+                
+                <form id="excelUploadForm" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="excelFile" class="form-label">Select Excel File</label>
+                        <input type="file" class="form-control" id="excelFile" name="file" 
+                               accept=".xlsx,.xls" required>
+                        <div id="fileNamePreview" class="mt-2 text-muted small"></div>
+                        <small class="text-muted">Only .xlsx or .xls files generated by employees are accepted</small>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="confirmVerify" required>
+                        <label class="form-check-label" for="confirmVerify">
+                            I confirm that this file was generated by an employee and contains their serial entries
+                        </label>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success btn-lg w-100" id="uploadBtn">
+                        <i class="bi bi-cloud-upload"></i> Upload & Auto-Verify
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm" id="resultsCard" style="display: none;">
+            <div class="card-header" id="resultsHeader">
+                <h5 class="mb-0" id="resultsTitle">Verification Results</h5>
+            </div>
+            <div class="card-body" id="resultsBody">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Processing verification results...</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-clock-history"></i> Recent Active Assignments
+                </h5>
+                <span class="badge bg-light text-dark">{{ recent_assignments|length }} Total</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for assignment in recent_assignments %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ assignment.employee.get_full_name|default:assignment.employee.username }}</strong>
+                                <br>
+                                <small class="text-muted">
+                                    <i class="bi bi-geo-alt"></i> {{ assignment.exam_city }} | 
+                                    <i class="bi bi-calendar"></i> {{ assignment.assigned_date|date:"d/m/Y" }}
+                                </small>
+                            </div>
+                            <span class="badge bg-info">{{ assignment.exam_city }}</span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="list-group-item text-center py-4">
+                        <i class="bi bi-inbox" style="font-size: 2rem; color: var(--text-muted);"></i>
+                        <p class="text-muted mb-0 mt-2">No active assignments</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-table"></i> Expected Excel Format
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Hardware Type</th>
+                                <th>Model</th>
+                                <th>Assigned Serial</th>
+                                <th>Employee Entered Serial</th>
+                                <th>Match Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="table-success">
+                                <td>Laptop</td>
+                                <td>ThinkPad X1</td>
+                                <td><code>LAP123456</code></td>
+                                <td><code>LAP123456</code></td>
+                                <td><span class="badge bg-success">MATCHED</span></td>
+                            </tr>
+                            <tr class="table-danger">
+                                <td>Mouse</td>
+                                <td>Logitech MX</td>
+                                <td><code>MOU789012</code></td>
+                                <td><code>MOU789013</code></td>
+                                <td><span class="badge bg-danger">MISMATCH</span></td>
+                            </tr>
+                            <tr class="table-warning">
+                                <td>Keyboard</td>
+                                <td>Dell KB216</td>
+                                <td><code>KEY345678</code></td>
+                                <td><code>NOT ENTERED</code></td>
+                                <td><span class="badge bg-warning">NOT ENTERED</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="alert alert-light mt-3">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>Note:</strong> The file must contain these exact column headers. The system will verify each row.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100;">
+    <div id="successToast" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="bi bi-check-circle-fill me-2"></i>
+                <span id="successMessage">File uploaded and verified successfully!</span>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+    
+    <div id="warningToast" class="toast align-items-center text-white bg-warning border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <span id="warningMessage">Verification completed with issues.</span>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+    
+    <div id="errorToast" class="toast align-items-center text-white bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <span id="errorMessage">Error processing file.</span>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+    
+    <div id="infoToast" class="toast align-items-center text-white bg-info border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="bi bi-info-circle-fill me-2"></i>
+                <span id="infoMessage">Processing file...</span>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="resultsModal" tabindex="-1" aria-labelledby="resultsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" id="resultsModalHeader">
+                <h5 class="modal-title" id="resultsModalLabel">Verification Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="resultsModalBody">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="downloadReportBtn" style="display: none;">
+                    <i class="bi bi-download"></i> Download Report
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<template id="resultTemplate">
+    <div class="file-info alert alert-light"></div>
+    <div class="status-message"></div>
+    <div class="progress-container mb-3"></div>
+    <div class="summary-table"></div>
+    <div class="assignment-info"></div>
+    <div class="details-section"></div>
+    <div class="auto-refresh-message"></div>
+</template>
+
+<style>
+    .bg-opacity-10 {
+        --bs-bg-opacity: 0.1;
+    }
+    
+    .card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        border-radius: 12px;
+    }
+    
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1) !important;
+    }
+    
+    .badge.rounded-circle {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+    }
+    
+    code {
+        background-color: var(--light);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.85em;
+        font-family: 'JetBrains Mono', monospace;
+    }
+    
+    .table-success {
+        background-color: rgba(25, 135, 84, 0.05);
+    }
+    
+    .table-danger {
+        background-color: rgba(220, 53, 69, 0.05);
+    }
+    
+    .table-warning {
+        background-color: rgba(255, 193, 7, 0.05);
+    }
+    
+    .progress {
+        border-radius: 20px;
+        overflow: hidden;
+        background-color: var(--light);
+    }
+    
+    .progress-bar {
+        transition: width 0.3s ease;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .list-group-item {
+        transition: background-color 0.2s ease;
+    }
+    
+    .list-group-item:hover {
+        background-color: var(--hover-bg);
+    }
+    
+    #resultsCard {
+        animation: slideIn 0.3s ease;
+    }
+    
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .toast {
+        min-width: 300px;
+    }
+    
+    @media (max-width: 768px) {
+        .col-md-3 {
+            margin-bottom: 15px;
+        }
+        
+        .badge.rounded-circle {
+            width: 30px;
+            height: 30px;
+            font-size: 0.9rem;
+        }
+        
+        .toast {
+            min-width: 250px;
+        }
+    }
+</style>
+
+<script>
+    $(document).ready(function() {
+        let filesProcessed = 0;
+        let totalVerified = 0;
+        
+        var successToast = new bootstrap.Toast(document.getElementById('successToast'), { delay: 5000 });
+        var warningToast = new bootstrap.Toast(document.getElementById('warningToast'), { delay: 7000 });
+        var errorToast = new bootstrap.Toast(document.getElementById('errorToast'), { delay: 7000 });
+        var infoToast = new bootstrap.Toast(document.getElementById('infoToast'), { delay: 3000 });
+        
+        function showToast(type, message) {
+            if (type === 'success') {
+                $('#successMessage').text(message);
+                successToast.show();
+            } else if (type === 'warning') {
+                $('#warningMessage').text(message);
+                warningToast.show();
+            } else if (type === 'error') {
+                $('#errorMessage').text(message);
+                errorToast.show();
+            } else if (type === 'info') {
+                $('#infoMessage').text(message);
+                infoToast.show();
+            }
+        }
+        
+        function showResultsModal(response) {
+            var modalHeader = $('#resultsModalHeader');
+            var modalTitle = $('#resultsModalLabel');
+            var modalBody = $('#resultsModalBody');
+            
+            modalHeader.removeClass('bg-success bg-warning bg-danger');
+            if (response.auto_verified) {
+                modalHeader.addClass('bg-success text-white');
+                modalTitle.html('<i class="bi bi-check-circle"></i> Verification Successful');
+            } else if (response.matched > 0) {
+                modalHeader.addClass('bg-warning text-white');
+                modalTitle.html('<i class="bi bi-exclamation-triangle"></i> Verification Completed with Issues');
+            } else {
+                modalHeader.addClass('bg-danger text-white');
+                modalTitle.html('<i class="bi bi-x-circle"></i> Verification Failed');
+            }
+            
+            var html = '';
+            
+            html += '<div class="alert alert-light">';
+            html += '<div class="row">';
+            html += '<div class="col-md-6"><small><strong>File:</strong> ' + response.filename + '</small></div>';
+            html += '<div class="col-md-6"><small><strong>Exam City:</strong> ' + response.exam_city + '</small></div>';
+            html += '<div class="col-md-6"><small><strong>Employee:</strong> ' + response.employee_name + '</small></div>';
+            if (response.assignment_id) {
+                html += '<div class="col-md-6"><small><strong>Assignment ID:</strong> ' + response.assignment_id + '</small></div>';
+            }
+            html += '</div>';
+            html += '</div>';
+            
+            if (response.total > 0) {
+                var matchedPercent = (response.matched / response.total * 100).toFixed(1);
+                var mismatchedPercent = (response.mismatched / response.total * 100).toFixed(1);
+                
+                html += '<div class="mb-3">';
+                html += '<div class="progress" style="height: 25px;">';
+                if (response.matched > 0) {
+                    html += '<div class="progress-bar bg-success" style="width: ' + matchedPercent + '%">';
+                    html += response.matched + ' Matched</div>';
+                }
+                if (response.mismatched > 0) {
+                    html += '<div class="progress-bar bg-danger" style="width: ' + mismatchedPercent + '%">';
+                    html += response.mismatched + ' Mismatch</div>';
+                }
+                html += '</div>';
+                html += '</div>';
+            }
+            
+            html += '<table class="table table-sm table-bordered">';
+            html += '<tr><th>Total Items:</th><td><strong>' + response.total + '</strong></td></tr>';
+            html += '<tr class="table-success"><th>✅ Matched:</th><td><span class="badge bg-success">' + response.matched + '</span></td></tr>';
+            html += '<tr class="table-danger"><th>❌ Mismatched:</th><td><span class="badge bg-danger">' + response.mismatched + '</span></td></tr>';
+            html += '<tr class="table-warning"><th>⏳ Pending:</th><td><span class="badge bg-warning">' + response.pending + '</span></td></tr>';
+            html += '<tr class="table-secondary"><th>❓ Not Found:</th><td><span class="badge bg-secondary">' + response.not_found + '</span></td></tr>';
+            html += '</table>';
+            
+            if (response.details && response.details.length > 0 && 
+                (response.mismatched > 0 || response.not_found > 0 || response.pending > 0)) {
+                html += '<h6 class="mt-3">Issue Details:</h6>';
+                html += '<div style="max-height: 200px; overflow-y: auto;" class="border rounded p-2">';
+                response.details.forEach(function(detail) {
+                    if (detail.status !== 'success') {
+                        var badgeClass = detail.status === 'mismatch' ? 'danger' : 
+                                        detail.status === 'pending' ? 'warning' : 'secondary';
+                        html += '<div class="alert alert-' + badgeClass + ' py-2 px-3 mb-2">';
+                        html += '<small class="d-block"><strong>Row ' + detail.row + ':</strong> ' + detail.message + '</small>';
+                        if (detail.assigned_serial) {
+                            html += '<small class="d-block text-muted">Serial: <code>' + detail.assigned_serial + '</code></small>';
+                        }
+                        html += '</div>';
+                    }
+                });
+                html += '</div>';
+            }
+            
+            modalBody.html(html);
+            
+            var resultsModal = new bootstrap.Modal(document.getElementById('resultsModal'));
+            resultsModal.show();
+        }
+        
+        $('#excelUploadForm').on('submit', function(e) {
+            e.preventDefault();
+            
+            var formData = new FormData(this);
+            var uploadBtn = $('#uploadBtn');
+            var originalText = uploadBtn.html();
+            var fileName = $('#excelFile')[0].files[0]?.name || 'Unknown';
+            
+            if (!$('#excelFile')[0].files[0]) {
+                showToast('error', 'Please select a file to upload.');
+                return;
+            }
+            
+            if (!fileName.match(/^[a-zA-Z0-9_]+_[a-zA-Z0-9_]+_\d{8}.*\.xlsx?$/)) {
+                if (!confirm('Filename does not match the expected format (examcity_employeename_date.xlsx). Continue anyway?')) {
+                    return;
+                }
+            }
+            
+            if (!$('#confirmVerify').is(':checked')) {
+                showToast('error', 'Please confirm that this file was generated by an employee.');
+                return;
+            }
+            
+            uploadBtn.html('<i class="bi bi-hourglass-split"></i> Processing...').prop('disabled', true);
+            showToast('info', 'Processing file: ' + fileName);
+            
+            $('#resultsCard').show();
+            $('#resultsBody').html(`
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Verifying serial numbers...</p>
+                    <small class="text-muted">Processing file: ${fileName}</small>
+                </div>
+            `);
+            
+            $.ajax({
+                url: '{% url "manager_auto_verify_excel" %}',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    filesProcessed++;
+                    $('#totalFiles').text(filesProcessed);
+                    
+                    totalVerified += response.matched;
+                    $('#totalVerified').text(totalVerified);
+                    $('#totalPending').text(parseInt($('#totalPending').text()) + response.pending + response.mismatched);
+                    
+                    if (response.auto_verified) {
+                        showToast('success', '✅ All items matched! Auto-verification successful.');
+                    } else if (response.matched > 0) {
+                        showToast('warning', `⚠ Verification completed: ${response.matched} matched, ${response.mismatched} mismatched, ${response.pending} pending.`);
+                    } else if (response.mismatched > 0) {
+                        showToast('error', `❌ Verification failed: ${response.mismatched} mismatched items found.`);
+                    } else {
+                        showToast('error', '❌ No valid data found in file.');
+                    }
+                    
+                    var headerClass = 'bg-success';
+                    var headerIcon = 'check-circle';
+                    var headerTitle = 'Auto-Verification Successful';
+                    
+                    if (response.auto_verified) {
+                        headerClass = 'bg-success';
+                        headerIcon = 'check-circle';
+                        headerTitle = '✓ Auto-Verification Successful';
+                    } else if (response.matched > 0) {
+                        headerClass = 'bg-warning';
+                        headerIcon = 'exclamation-triangle';
+                        headerTitle = '⚠ Verification Completed with Issues';
+                    } else {
+                        headerClass = 'bg-danger';
+                        headerIcon = 'x-circle';
+                        headerTitle = '✗ Verification Failed';
+                    }
+                    
+                    $('#resultsHeader').attr('class', 'card-header ' + headerClass + ' text-white');
+                    $('#resultsTitle').html('<i class="bi bi-' + headerIcon + '"></i> ' + headerTitle);
+                    
+                    var html = '';
+                    
+                    html += '<div class="alert alert-light mb-3">';
+                    html += '<div class="row">';
+                    html += '<div class="col-md-6"><small><strong>File:</strong> ' + response.filename + '</small></div>';
+                    html += '<div class="col-md-6"><small><strong>Exam City:</strong> ' + response.exam_city + '</small></div>';
+                    html += '<div class="col-md-6"><small><strong>Employee:</strong> ' + response.employee_name + '</small></div>';
+                    if (response.assignment_id) {
+                        html += '<div class="col-md-6"><small><strong>Assignment ID:</strong> ' + response.assignment_id + '</small></div>';
+                    }
+                    html += '</div>';
+                    html += '</div>';
+                    
+                    html += '<div class="alert alert-' + (response.auto_verified ? 'success' : 'warning') + '">';
+                    html += '<i class="bi bi-' + (response.auto_verified ? 'check-circle-fill' : 'info-circle-fill') + '"></i> ';
+                    html += response.message || 'Verification completed.';
+                    html += '</div>';
+                    
+                    if (response.total > 0) {
+                        var matchedPercent = (response.matched / response.total * 100).toFixed(1);
+                        var mismatchedPercent = (response.mismatched / response.total * 100).toFixed(1);
+                        
+                        html += '<div class="mb-3">';
+                        html += '<div class="progress" style="height: 30px;">';
+                        if (response.matched > 0) {
+                            html += '<div class="progress-bar bg-success" style="width: ' + matchedPercent + '%" title="Matched: ' + response.matched + '">';
+                            html += response.matched + ' Matched</div>';
+                        }
+                        if (response.mismatched > 0) {
+                            html += '<div class="progress-bar bg-danger" style="width: ' + mismatchedPercent + '%" title="Mismatched: ' + response.mismatched + '">';
+                            html += response.mismatched + ' Mismatch</div>';
+                        }
+                        html += '</div>';
+                        html += '<div class="d-flex justify-content-between mt-1">';
+                        html += '<small class="text-success">' + matchedPercent + '%</small>';
+                        html += '<small class="text-danger">' + mismatchedPercent + '%</small>';
+                        html += '</div>';
+                        html += '</div>';
+                    }
+                    
+                    html += '<table class="table table-sm table-bordered">';
+                    html += '<tr><th colspan="2" class="table-light">Verification Summary</th></tr>';
+                    html += '<tr><th>Total Items:</th><td><strong>' + response.total + '</strong></td></tr>';
+                    html += '<tr class="table-success"><th>✅ Matched:</th><td><span class="badge bg-success">' + response.matched + '</span></td></tr>';
+                    html += '<tr class="table-danger"><th>❌ Mismatched:</th><td><span class="badge bg-danger">' + response.mismatched + '</span></td></tr>';
+                    html += '<tr class="table-warning"><th>⏳ Pending:</th><td><span class="badge bg-warning">' + response.pending + '</span></td></tr>';
+                    html += '<tr class="table-secondary"><th>❓ Not Found:</th><td><span class="badge bg-secondary">' + response.not_found + '</span></td></tr>';
+                    html += '</table>';
+                    
+                    if (response.assignment_id) {
+                        html += '<div class="alert alert-success mt-3">';
+                        html += '<i class="bi bi-link"></i> <strong>Assignment Found:</strong> ';
+                        html += '<a href="/manager/assignment-details/' + response.assignment_id + '/" class="alert-link">View Assignment</a>';
+                        html += '</div>';
+                    }
+                    
+                    html += '<div class="text-center mt-3">';
+                    html += '<button class="btn btn-outline-primary" onclick="showResultsModal(' + JSON.stringify(response).replace(/"/g, '&quot;') + ')">';
+                    html += '<i class="bi bi-eye"></i> View Full Details';
+                    html += '</button>';
+                    html += '</div>';
+                    
+                    if (response.auto_verified) {
+                        html += '<div class="alert alert-info mt-3 text-center">';
+                        html += '<i class="bi bi-arrow-repeat"></i> Page will refresh in 3 seconds to show updated status...';
+                        html += '</div>';
+                        
+                        setTimeout(function() {
+                            location.reload();
+                        }, 3000);
+                    }
+                    
+                    $('#resultsBody').html(html);
+                },
+                error: function(xhr) {
+                    $('#resultsHeader').attr('class', 'card-header bg-danger text-white');
+                    $('#resultsTitle').html('<i class="bi bi-exclamation-triangle"></i> Error');
+                    
+                    var errorMsg = 'An unknown error occurred.';
+                    if (xhr.responseJSON && xhr.responseJSON.error) {
+                        errorMsg = xhr.responseJSON.error;
+                    } else if (xhr.status === 413) {
+                        errorMsg = 'File too large. Maximum size is 10MB.';
+                    } else if (xhr.status === 415) {
+                        errorMsg = 'Invalid file type. Please upload an Excel file (.xlsx or .xls).';
+                    }
+                    
+                    showToast('error', errorMsg);
+                    
+                    $('#resultsBody').html(`
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            <strong>Error:</strong> ${errorMsg}
+                        </div>
+                        <div class="mt-3">
+                            <h6>Troubleshooting:</h6>
+                            <ul class="text-muted">
+                                <li>Ensure the file is a valid Excel file (.xlsx or .xls)</li>
+                                <li>Check that the file has the correct column headers</li>
+                                <li>Verify the file was generated by an employee</li>
+                                <li>Try downloading and uploading again</li>
+                            </ul>
+                        </div>
+                    `);
+                },
+                complete: function() {
+                    uploadBtn.html(originalText).prop('disabled', false);
+                    $('#excelUploadForm')[0].reset();
+                    $('#fileNamePreview').text('');
+                }
+            });
+        });
+        
+        $('#excelFile').on('change', function() {
+            var fileName = $(this).val().split('\\').pop();
+            if (fileName) {
+                $('#fileNamePreview').html('<i class="bi bi-file-earmark"></i> Selected: <strong>' + fileName + '</strong>');
+            } else {
+                $('#fileNamePreview').text('');
+            }
+        });
+        
+        $('#excelFile').on('dragover', function() {
+            $(this).addClass('border-primary');
+        }).on('dragleave', function() {
+            $(this).removeClass('border-primary');
+        });
+        
+        window.showResultsModal = function(response) {
+            var modalHeader = $('#resultsModalHeader');
+            var modalTitle = $('#resultsModalLabel');
+            var modalBody = $('#resultsModalBody');
+            
+            modalHeader.removeClass('bg-success bg-warning bg-danger');
+            if (response.auto_verified) {
+                modalHeader.addClass('bg-success text-white');
+                modalTitle.html('<i class="bi bi-check-circle"></i> Verification Successful');
+            } else if (response.matched > 0) {
+                modalHeader.addClass('bg-warning text-white');
+                modalTitle.html('<i class="bi bi-exclamation-triangle"></i> Verification Completed with Issues');
+            } else {
+                modalHeader.addClass('bg-danger text-white');
+                modalTitle.html('<i class="bi bi-x-circle"></i> Verification Failed');
+            }
+            
+            var html = '';
+            
+            html += '<div class="alert alert-light">';
+            html += '<div class="row">';
+            html += '<div class="col-md-6"><small><strong>File:</strong> ' + response.filename + '</small></div>';
+            html += '<div class="col-md-6"><small><strong>Exam City:</strong> ' + response.exam_city + '</small></div>';
+            html += '<div class="col-md-6"><small><strong>Employee:</strong> ' + response.employee_name + '</small></div>';
+            if (response.assignment_id) {
+                html += '<div class="col-md-6"><small><strong>Assignment ID:</strong> ' + response.assignment_id + '</small></div>';
+            }
+            html += '</div>';
+            html += '</div>';
+            
+            if (response.total > 0) {
+                var matchedPercent = (response.matched / response.total * 100).toFixed(1);
+                var mismatchedPercent = (response.mismatched / response.total * 100).toFixed(1);
+                
+                html += '<div class="mb-3">';
+                html += '<div class="progress" style="height: 25px;">';
+                if (response.matched > 0) {
+                    html += '<div class="progress-bar bg-success" style="width: ' + matchedPercent + '%">';
+                    html += response.matched + ' Matched</div>';
+                }
+                if (response.mismatched > 0) {
+                    html += '<div class="progress-bar bg-danger" style="width: ' + mismatchedPercent + '%">';
+                    html += response.mismatched + ' Mismatch</div>';
+                }
+                html += '</div>';
+                html += '</div>';
+            }
+            
+            html += '<table class="table table-sm table-bordered">';
+            html += '<tr><th>Total Items:</th><td><strong>' + response.total + '</strong></td></tr>';
+            html += '<tr class="table-success"><th>✅ Matched:</th><td><span class="badge bg-success">' + response.matched + '</span></td></tr>';
+            html += '<tr class="table-danger"><th>❌ Mismatched:</th><td><span class="badge bg-danger">' + response.mismatched + '</span></td></tr>';
+            html += '<tr class="table-warning"><th>⏳ Pending:</th><td><span class="badge bg-warning">' + response.pending + '</span></td></tr>';
+            html += '<tr class="table-secondary"><th>❓ Not Found:</th><td><span class="badge bg-secondary">' + response.not_found + '</span></td></tr>';
+            html += '</table>';
+            
+            if (response.details && response.details.length > 0 && 
+                (response.mismatched > 0 || response.not_found > 0 || response.pending > 0)) {
+                html += '<h6 class="mt-3">Issue Details:</h6>';
+                html += '<div style="max-height: 300px; overflow-y: auto;" class="border rounded p-2">';
+                response.details.forEach(function(detail) {
+                    if (detail.status !== 'success') {
+                        var badgeClass = detail.status === 'mismatch' ? 'danger' : 
+                                        detail.status === 'pending' ? 'warning' : 'secondary';
+                        html += '<div class="alert alert-' + badgeClass + ' py-2 px-3 mb-2">';
+                        html += '<small class="d-block"><strong>Row ' + detail.row + ':</strong> ' + detail.message + '</small>';
+                        if (detail.assigned_serial) {
+                            html += '<small class="d-block text-muted">Serial: <code>' + detail.assigned_serial + '</code></small>';
+                        }
+                        html += '</div>';
+                    }
+                });
+                html += '</div>';
+            }
+            
+            modalBody.html(html);
+            
+            var resultsModal = new bootstrap.Modal(document.getElementById('resultsModal'));
+            resultsModal.show();
+        };
+    });
+</script>
+{% endblock %}

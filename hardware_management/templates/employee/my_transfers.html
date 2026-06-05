@@ -1,0 +1,443 @@
+{% extends 'base.html' %}
+{% block title %}My Transfers - Eduquity Hardware Management{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <div>
+                <h2 class="fw-bold"><i class="bi bi-arrow-left-right text-primary me-2"></i> My Hardware Transfers</h2>
+                <p class="text-muted mb-0">Track your sent and received hardware transfers</p>
+            </div>
+            <div class="mt-2 mt-sm-0">
+                <a href="{% url 'request_hardware_transfer' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-1"></i> Request Transfer
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Statistics Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card stat-card-primary">
+            <div class="stat-icon">
+                <i class="bi bi-send"></i>
+            </div>
+            <div class="stat-info">
+                <h3 class="stat-value">{{ sent_transfers|length }}</h3>
+                <p class="stat-label">Transfers Sent</p>
+            </div>
+            <div class="stat-progress">
+                <div class="progress-bar" style="width: 100%"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card stat-card-warning">
+            <div class="stat-icon">
+                <i class="bi bi-hourglass-split"></i>
+            </div>
+            <div class="stat-info">
+                <h3 class="stat-value">{{ pending_sent }}</h3>
+                <p class="stat-label">Pending Approval</p>
+            </div>
+            <div class="stat-progress">
+                <div class="progress-bar" style="width: {% widthratio pending_sent sent_transfers|length 100 %}%"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card stat-card-info">
+            <div class="stat-icon">
+                <i class="bi bi-download"></i>
+            </div>
+            <div class="stat-info">
+                <h3 class="stat-value">{{ received_transfers|length }}</h3>
+                <p class="stat-label">Transfers Received</p>
+            </div>
+            <div class="stat-progress">
+                <div class="progress-bar" style="width: 100%"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card stat-card-success">
+            <div class="stat-icon">
+                <i class="bi bi-check-circle"></i>
+            </div>
+            <div class="stat-info">
+                <h3 class="stat-value">{{ pending_received }}</h3>
+                <p class="stat-label">Awaiting Receipt</p>
+            </div>
+            <div class="stat-progress">
+                <div class="progress-bar" style="width: {% widthratio pending_received received_transfers|length 100 %}%"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sent Transfers -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-send"></i> Transfers Sent by You</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Transfer ID</th>
+                        <!-- <th>Hardware</th> -->
+                        <th>To Employee</th>
+                        <th>To Location</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Requested Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transfer in sent_transfers %}
+                    <tr>
+                        <td><strong>{{ transfer.transfer_id }}</strong></td>
+                        <!-- <td>{{ transfer.hardware_item.hardware_type.name }}<br><small>{{ transfer.hardware_item.serial_number }}</small></td> -->
+                        <td>{{ transfer.to_employee.get_full_name|default:transfer.to_employee.username }}</td>
+                        <td>{{ transfer.to_exam_city }}</td>
+                        <td>
+                            {% if transfer.transfer_type == 'temporary' %}
+                                <span class="badge bg-info">Temporary</span>
+                            {% else %}
+                                <span class="badge bg-success">Permanent</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if transfer.status == 'requested' %}
+                                <span class="badge bg-warning">Pending Approval</span>
+                            {% elif transfer.status == 'approved_by_manager' %}
+                                <span class="badge bg-info">Approved - Ready to Send</span>
+                            {% elif transfer.status == 'in_transit' %}
+                                <span class="badge bg-primary">In Transit</span>
+                            {% elif transfer.status == 'received_by_receiver' %}
+                                <span class="badge bg-success">Received by Employee</span>
+                            {% elif transfer.status == 'completed' %}
+                                <span class="badge bg-success">Completed</span>
+                            {% elif transfer.status == 'rejected' %}
+                                <span class="badge bg-danger">Rejected</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ transfer.requested_date|date:"d/m/Y" }}</td>
+                        <td>
+                            <a href="{% url 'transfer_tracking' transfer.id %}" class="btn btn-sm btn-outline-info">
+                                <i class="bi bi-eye"></i> Track
+                            </a>
+                            {% if transfer.status == 'approved_by_manager' %}
+                            <a href="#" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#initiateModal{{ transfer.id }}">
+                                <i class="bi bi-send"></i> Initiate
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    
+                    <!-- Initiate Transfer Modal -->
+                    <div class="modal fade" id="initiateModal{{ transfer.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <form method="POST" action="{% url 'update_transfer_status_employee' transfer.id %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="initiate">
+                                    <div class="modal-header bg-success text-white">
+                                        <h5 class="modal-title">Initiate Transfer</h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p>You are about to initiate transfer of <strong>{{ transfer.hardware_item.serial_number }}</strong> to <strong>{{ transfer.to_employee.get_full_name }}</strong>.</p>
+                                        <div class="mb-3">
+                                            <label class="form-label">Condition of Hardware</label>
+                                            <textarea name="notes" class="form-control" rows="3" placeholder="Describe current condition of the hardware before sending..."></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <button type="submit" class="btn btn-success">Confirm Initiate</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <tr><td colspan="8" class="text-center py-4">No transfers sent yet</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Received Transfers -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0"><i class="bi bi-download"></i> Transfers Received by You</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Transfer ID</th>
+                        <!-- <th>Hardware</th> -->
+                        <th>From Employee</th>
+                        <th>From Location</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Expected Arrival</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transfer in received_transfers %}
+                    <tr>
+                        <td><strong>{{ transfer.transfer_id }}</strong></td>
+                        <!-- <td>{{ transfer.hardware_item.hardware_type.name }}<br><small>{{ transfer.hardware_item.serial_number }}</small></td> -->
+                        <td>{{ transfer.from_employee.get_full_name|default:transfer.from_employee.username }}</td>
+                        <td>{{ transfer.from_exam_city }}</td>
+                        <td>
+                            {% if transfer.transfer_type == 'temporary' %}
+                                <span class="badge bg-info">Temporary</span>
+                            {% else %}
+                                <span class="badge bg-success">Permanent</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if transfer.status == 'in_transit' %}
+                                <span class="badge bg-primary">In Transit</span>
+                            {% elif transfer.status == 'received_by_receiver' %}
+                                <span class="badge bg-success">Received</span>
+                            {% elif transfer.status == 'completed' %}
+                                <span class="badge bg-success">Completed</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ transfer.expected_arrival_date|date:"d/m/Y" }}</td>
+                        <td>
+                            <a href="{% url 'transfer_tracking' transfer.id %}" class="btn btn-sm btn-outline-info">
+                                <i class="bi bi-eye"></i> Track
+                            </a>
+                            {% if transfer.status == 'in_transit' %}
+                            <a href="#" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#receiveModal{{ transfer.id }}">
+                                <i class="bi bi-check-circle"></i> Confirm Receipt
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    
+                    <!-- Confirm Receipt Modal -->
+                    <div class="modal fade" id="receiveModal{{ transfer.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <form method="POST" action="{% url 'update_transfer_status_employee' transfer.id %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="receive">
+                                    <div class="modal-header bg-success text-white">
+                                        <h5 class="modal-title">Confirm Hardware Receipt</h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p>Have you received <strong>{{ transfer.hardware_item.serial_number }}</strong> from <strong>{{ transfer.from_employee.get_full_name }}</strong>?</p>
+                                        <div class="mb-3">
+                                            <label class="form-label">Condition of Hardware Received</label>
+                                            <textarea name="notes" class="form-control" rows="3" placeholder="Describe condition of the hardware received..."></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <button type="submit" class="btn btn-success">Confirm Receipt</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <tr><td colspan="8" class="text-center py-4">No transfers received yet</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<style>
+    /* Stat Cards */
+    .stat-card {
+        background: white;
+        border-radius: 16px;
+        padding: 20px;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        border: 1px solid rgba(0,0,0,0.05);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+    }
+    
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        margin-bottom: 12px;
+    }
+    
+    .stat-card-primary .stat-icon {
+        background: rgba(13, 110, 253, 0.1);
+        color: #0d6efd;
+    }
+    
+    .stat-card-warning .stat-icon {
+        background: rgba(255, 193, 7, 0.1);
+        color: #ffc107;
+    }
+    
+    .stat-card-info .stat-icon {
+        background: rgba(13, 202, 240, 0.1);
+        color: #0dcaf0;
+    }
+    
+    .stat-card-success .stat-icon {
+        background: rgba(25, 135, 84, 0.1);
+        color: #198754;
+    }
+    
+    .stat-value {
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 4px;
+    }
+    
+    .stat-label {
+        font-size: 13px;
+        color: #6c757d;
+        margin-bottom: 0;
+    }
+    
+    .stat-progress {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: rgba(0,0,0,0.05);
+    }
+    
+    .stat-progress .progress-bar {
+        height: 100%;
+        border-radius: 0;
+    }
+    
+    .stat-card-primary .progress-bar { background: #0d6efd; }
+    .stat-card-warning .progress-bar { background: #ffc107; }
+    .stat-card-info .progress-bar { background: #0dcaf0; }
+    .stat-card-success .progress-bar { background: #198754; }
+    
+    /* Card Headers */
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+    }
+    
+    .bg-gradient-success {
+        background: linear-gradient(135deg, #198754 0%, #157347 100%);
+    }
+    
+    /* Table Styling */
+    .table th {
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #6c757d;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .table td {
+        vertical-align: middle;
+        padding: 16px 8px;
+        font-size: 0.85rem;
+    }
+    
+    /* Badge Opacity Styles */
+    .bg-opacity-10 {
+        --bs-bg-opacity: 0.1;
+    }
+    
+    .badge.bg-opacity-10 {
+        backdrop-filter: blur(4px);
+    }
+    
+    /* Empty State */
+    .empty-state {
+        padding: 40px 20px;
+    }
+    
+    /* Code styling */
+    code {
+        background-color: #f8f9fa;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-family: monospace;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .stat-card {
+            padding: 15px;
+        }
+        .stat-value {
+            font-size: 22px;
+        }
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+        }
+        .table th, .table td {
+            padding: 10px 8px;
+            font-size: 0.75rem;
+        }
+        .btn-group .btn {
+            padding: 0.25rem 0.5rem;
+        }
+    }
+    
+    /* Dark mode support */
+    [data-theme="dark"] .stat-card {
+        background: var(--card-bg);
+        border-color: var(--border-color);
+    }
+    
+    [data-theme="dark"] .stat-label {
+        color: var(--gray);
+    }
+    
+    [data-theme="dark"] .table th {
+        color: var(--gray);
+        border-bottom-color: var(--border-color);
+    }
+    
+    [data-theme="dark"] code {
+        background-color: var(--light);
+        color: var(--text-color);
+    }
+    
+    [data-theme="dark"] .badge.bg-light {
+        background-color: var(--light) !important;
+        color: var(--text-color);
+    }
+</style>
+{% endblock %}

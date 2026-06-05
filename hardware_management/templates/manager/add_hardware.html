@@ -1,0 +1,268 @@
+{% extends 'base.html' %}
+{% block title %}Add Hardware - Eduquity Hardware Management{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2><i class="bi bi-laptop"></i> Add New Hardware</h2>
+                <p class="text-muted">Add new hardware items to your inventory</p>
+            </div>
+            <div>
+                <a href="{% url 'manage_hardware' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Inventory
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <!-- Bulk Upload Card -->
+        <div class="card shadow-sm mb-4 border-primary">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-file-spreadsheet"></i> Bulk Import Hardware
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle-fill"></i>
+                    <strong>Bulk Import Feature:</strong> Upload multiple hardware items at once using an Excel file.
+                    <a href="{% url 'download_hardware_template' %}" class="alert-link">Download template</a> to get started.
+                </div>
+                
+                <form method="POST" action="{% url 'add_hardware' %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="excel_file" class="form-label">Excel File *</label>
+                        <input type="file" class="form-control" id="excel_file" name="excel_file" 
+                               accept=".xlsx, .xls" required>
+                        <small class="text-muted">Upload Excel file (.xlsx or .xls) with hardware data</small>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <div class="border rounded p-3 bg-light">
+                                <i class="bi bi-check-circle-fill text-success"></i>
+                                <strong>Required Columns:</strong>
+                                <ul class="mb-0 mt-2 small">
+                                    <li><code>hardware_type</code> - Laptop, Desktop, Firewall, etc.</li>
+                                    <li><code>serial_number</code> - Unique identifier</li>
+                                    <li><code>model_name</code> - Model name/number</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-upload"></i> Import Hardware
+                        </button>
+                        <a href="{% url 'download_hardware_template' %}" class="btn btn-outline-success">
+                            <i class="bi bi-download"></i> Download Template
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Single Hardware Addition Card -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-secondary text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-plus-circle"></i> Add Single Hardware
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{% url 'add_hardware' %}">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="hardware_type" class="form-label">Hardware Type *</label>
+                            <select class="form-select" id="hardware_type" name="hardware_type" required>
+                                <option value="">Select hardware type</option>
+                                {% for hw_type in hardware_types %}
+                                <option value="{{ hw_type.id }}">{{ hw_type.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="serial_number" class="form-label">Serial Number *</label>
+                            <input type="text" class="form-control" id="serial_number" name="serial_number" 
+                                   placeholder="Enter unique serial number" required>
+                            <small class="text-muted">Must be unique for each hardware item</small>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="model_name" class="form-label">Model Name *</label>
+                            <input type="text" class="form-control" id="model_name" name="model_name" 
+                                   placeholder="e.g., P16, L14, Optiplex" required>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="brand" class="form-label">Brand (Optional)</label>
+                            <input type="text" class="form-control" id="brand" name="brand" 
+                                   placeholder="e.g., Dell, HP, Lenovo, Cisco">
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 
+                        Hardware will be added with <strong>"Available"</strong> status and can be assigned to employees.
+                    </div>
+                    
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="bi bi-save"></i> Add Hardware
+                    </button>
+                    <a href="{% url 'manage_hardware' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> Cancel
+                    </a>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Hardware Types Card -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-tags"></i> Available Hardware Types
+                </h4>
+            </div>
+            <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                <div class="list-group list-group-flush">
+                    {% for hw_type in hardware_types %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <i class="bi bi-laptop"></i> {{ hw_type.name }}
+                        </span>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-3">
+                        <p class="text-muted mb-0">No hardware types found</p>
+                        <a href="{% url 'manage_hardware_types' %}" class="btn btn-sm btn-primary mt-2">
+                            Add Hardware Types
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="card-footer bg-light">
+                <small class="text-muted">
+                    <i class="bi bi-info-circle"></i> 
+                    Total types: {{ hardware_types|length }}
+                </small>
+                <a href="{% url 'manage_hardware_types' %}" class="btn btn-sm btn-link float-end">
+                    Manage Types <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+        
+        <!-- Quick Tips Card -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-lightbulb"></i> Quick Tips
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="d-flex mb-3">
+                    <i class="bi bi-file-spreadsheet fs-4 text-primary me-3"></i>
+                    <div>
+                        <h6 class="mb-1">Bulk Import</h6>
+                        <small class="text-muted">Import multiple hardware items at once using Excel</small>
+                    </div>
+                </div>
+                <div class="d-flex mb-3">
+                    <i class="bi bi-shield-check fs-4 text-success me-3"></i>
+                    <div>
+                        <h6 class="mb-1">Unique Serial Numbers</h6>
+                        <small class="text-muted">System validates serial numbers to prevent duplicates</small>
+                    </div>
+                </div>
+                <div class="d-flex">
+                    <i class="bi bi-download fs-4 text-info me-3"></i>
+                    <div>
+                        <h6 class="mb-1">Template Available</h6>
+                        <small class="text-muted">Download template with example data for easy import</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        border-radius: 12px;
+        overflow: hidden;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.08) !important;
+    }
+    
+    code {
+        background-color: #f8f9fa;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        color: #d63384;
+    }
+    
+    .list-group-item {
+        border-left: none;
+        border-right: none;
+    }
+    
+    .list-group-item:first-child {
+        border-top: none;
+    }
+    
+    .list-group-item:last-child {
+        border-bottom: none;
+    }
+    
+    @media (max-width: 768px) {
+        .col-md-8, .col-md-4 {
+            margin-bottom: 20px;
+        }
+    }
+</style>
+
+<script>
+    // Auto-dismiss alerts after 5 seconds
+    setTimeout(function() {
+        var alerts = document.querySelectorAll('.alert');
+        alerts.forEach(function(alert) {
+            if (alert.classList.contains('alert-dismissible')) {
+                var bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            }
+        });
+    }, 5000);
+    
+    // File validation
+    document.getElementById('excel_file')?.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const fileName = file.name;
+            const fileExtension = fileName.split('.').pop().toLowerCase();
+            if (!['xlsx', 'xls'].includes(fileExtension)) {
+                alert('Please upload only Excel files (.xlsx or .xls)');
+                this.value = '';
+            }
+        }
+    });
+</script>
+{% endblock %}

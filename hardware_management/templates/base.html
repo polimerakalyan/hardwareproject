@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Eduquity Hardware Management{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9;
+            color: #1e293b;
+            line-height: 1.5;
+        }
+
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: #ffffff;
+            border-right: 1px solid #e2e8f0;
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 20px rgba(0,0,0,0.02);
+        }
+
+        .sidebar-header {
+            padding: 24px 20px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo {
+            width: 40px;
+            height: 40px;
+            background: #E04D00;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .logo i {
+            font-size: 1.5rem;
+            line-height: 1;
+        }
+
+        .brand-name {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1e293b;
+            letter-spacing: -0.5px;
+        }
+
+        .brand-name span {
+            color: #E04D00;
+            font-weight: 300;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 20px 0;
+            overflow-y: auto;
+        }
+
+        .nav-section-title {
+            padding: 12px 20px 8px;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #94a3b8;
+            font-weight: 600;
+        }
+
+        .nav-item {
+            display: block;
+            padding: 12px 20px;
+            color: #64748b;
+            text-decoration: none;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 2px 8px;
+            border-radius: 8px;
+        }
+
+        .nav-item:hover {
+            background-color: #f8fafc;
+            color: #E04D00;
+        }
+
+        .nav-item:hover .nav-icon {
+            color: #E04D00;
+        }
+
+        .nav-item.active {
+            background: linear-gradient(135deg, #E04D00, #FF6B1A);
+            color: white;
+            box-shadow: 0 4px 10px rgba(224, 77, 0, 0.2);
+        }
+
+        .nav-item.active .nav-icon {
+            color: white;
+        }
+
+        .nav-icon {
+            width: 24px;
+            text-align: center;
+            font-size: 1.2rem;
+            color: #94a3b8;
+            display: inline-block;
+        }
+
+        .nav-text {
+            flex: 1;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .nav-badge {
+            background-color: #e2e8f0;
+            color: #64748b;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .nav-item.active .nav-badge {
+            background-color: rgba(255,255,255,0.2);
+            color: white;
+        }
+
+        .bg-gradient-ai {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 2px 8px;
+            font-size: 0.7rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .nav-item.active .bg-gradient-ai {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            animation: pulse 2s infinite;
+        }
+
+        .nav-item .bi-robot {
+            transition: all 0.3s ease;
+        }
+
+        .nav-item:hover .bi-robot {
+            transform: scale(1.1);
+            filter: drop-shadow(0 0 3px rgba(102, 126, 234, 0.5));
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(0.95); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .sidebar-footer {
+            padding: 20px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, #E04D00, #FF6B1A);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .user-avatar i {
+            font-size: 1.5rem;
+        }
+
+        .user-details h6 {
+            margin: 0;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .user-details small {
+            color: #94a3b8;
+            font-size: 0.75rem;
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .top-nav {
+            height: 70px;
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 0 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 900;
+        }
+
+        .page-title h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 0;
+            letter-spacing: -0.5px;
+        }
+
+        .page-title p {
+            color: #94a3b8;
+            font-size: 0.85rem;
+            margin: 5px 0 0 0;
+        }
+
+        .mobile-menu-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #1e293b;
+            padding: 5px;
+            margin-right: 15px;
+            cursor: pointer;
+            display: none;
+        }
+
+        .mobile-menu-btn i {
+            font-size: 1.8rem;
+            line-height: 1;
+        }
+
+        .top-nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-action {
+            padding: 8px 16px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            color: #64748b;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-action i {
+            font-size: 1.1rem;
+            line-height: 1;
+        }
+
+        .btn-action:hover {
+            background: #f8fafc;
+            border-color: #E04D00;
+            color: #E04D00;
+        }
+
+        .btn-action:hover i {
+            color: #E04D00;
+        }
+
+        .btn-action.primary {
+            background: #E04D00;
+            color: white;
+            border-color: #E04D00;
+        }
+
+        .btn-action.primary i {
+            color: white;
+        }
+
+        .btn-action.primary:hover {
+            background: #c44500;
+        }
+
+        .btn-action.warning {
+            background: #f59e0b;
+            color: white;
+            border-color: #f59e0b;
+        }
+
+        .btn-action.warning i {
+            color: white;
+        }
+
+        .content-area {
+            flex: 1;
+            padding: 30px;
+            background: #f1f5f9;
+        }
+
+        .messages-container {
+            margin-bottom: 30px;
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 10px;
+            border: none;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.3s ease;
+            font-size: 0.95rem;
+        }
+
+        .alert i {
+            font-size: 1.2rem;
+            line-height: 1;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .alert-success {
+            background: #dff0d8;
+            color: #2e7d32;
+        }
+
+        .alert-danger {
+            background: #f8d7da;
+            color: #c62828;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #b45f06;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0b5e6b;
+        }
+
+        .first-login-banner {
+            background: linear-gradient(135deg, #f59e0b, #e67e22);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            animation: slideDown 0.5s ease;
+        }
+
+        .first-login-banner i {
+            font-size: 1.8rem;
+            line-height: 1;
+        }
+
+        .main-footer {
+            background: white;
+            border-top: 1px solid #e2e8f0;
+            padding: 20px 30px;
+            margin-top: auto;
+        }
+
+        .copyright {
+            text-align: center;
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+
+        .copyright i {
+            font-size: 0.9rem;
+            margin-right: 4px;
+        }
+
+        .floating-chat-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+        }
+
+        .floating-chat-btn .chat-trigger {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            text-decoration: none;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .floating-chat-btn .chat-trigger:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .floating-chat-btn .chat-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #dc3545;
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 20px;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
+
+        @media (max-width: 992px) {
+            .sidebar {
+                transform: translateX(-100%);
+                z-index: 1100;
+            }
+            
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .mobile-menu-btn {
+                display: block;
+            }
+            
+            .overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.5);
+                z-index: 1050;
+            }
+            
+            .overlay.show {
+                display: block;
+            }
+
+            .page-title h1 {
+                font-size: 1.2rem;
+            }
+        }
+        
+        @media (min-width: 993px) {
+            .mobile-menu-btn {
+                display: none;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .top-nav {
+                padding: 0 15px;
+            }
+            
+            .content-area {
+                padding: 20px;
+            }
+            
+            .quick-actions {
+                display: none;
+            }
+
+            .first-login-banner {
+                flex-direction: column;
+                text-align: center;
+                gap: 10px;
+            }
+
+            .floating-chat-btn {
+                bottom: 20px;
+                right: 20px;
+            }
+
+            .floating-chat-btn .chat-trigger {
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+        }
+
+        .bg-opacity-10 { opacity: 0.1; }
+        .text-primary { color: #E04D00 !important; }
+        .bg-primary { background-color: #E04D00 !important; }
+        .border-primary { border-color: #E04D00 !important; }
+        .btn-primary {
+            background-color: #E04D00;
+            border-color: #E04D00;
+        }
+        .btn-primary:hover {
+            background-color: #c44500;
+            border-color: #c44500;
+        }
+        
+        .bi {
+            display: inline-block;
+            font-size: inherit;
+            vertical-align: -0.125em;
+        }
+        
+        .nav-item i {
+            font-size: 1.2rem;
+            width: 1.5rem;
+            text-align: center;
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+    {% block inline_css %}{% endblock %}
+</head>
+<body>
+    {% if user.is_authenticated %}
+    <div class="overlay" id="overlay"></div>
+    
+    <div class="app-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="bi bi-laptop"></i>
+                </div>
+                <div class="brand-name">Eduquity<span>.</span></div>
+            </div>
+            
+            {% if user.user_type == 'employee' and user.is_first_login %}
+                <nav class="sidebar-nav">
+                    <div class="nav-section-title">Account Setup</div>
+                    <div class="nav-item" style="background: rgba(245,158,11,0.1); color: #f59e0b;">
+                        <i class="bi bi-shield-lock nav-icon" style="color: #f59e0b;"></i>
+                        <span class="nav-text">First Login</span>
+                    </div>
+                    
+                    <div class="nav-section-title">Account</div>
+                    <a href="{% url 'change_password' %}" class="nav-item {% if request.path == '/change-password/' %}active{% endif %}">
+                        <i class="bi bi-key nav-icon"></i>
+                        <span class="nav-text">Change Password</span>
+                        <span class="nav-badge">Required</span>
+                    </a>
+                    
+                    <div class="nav-section-title">Settings</div>
+                    <a href="{% url 'logout' %}" class="nav-item">
+                        <i class="bi bi-box-arrow-right nav-icon"></i>
+                        <span class="nav-text">Logout</span>
+                    </a>
+                </nav>
+            {% else %}
+                <nav class="sidebar-nav">
+                    <div class="nav-section-title">Main</div>
+                    <a href="{% if user.user_type == 'manager' %}{% url 'manager_dashboard' %}{% else %}{% url 'employee_dashboard' %}{% endif %}" 
+                       class="nav-item {% if request.path == '/manager/dashboard/' or request.path == '/employee/dashboard/' %}active{% endif %}">
+                        <i class="bi bi-speedometer2 nav-icon"></i>
+                        <span class="nav-text">Dashboard</span>
+                    </a>
+                    
+                    {% if user.user_type == 'manager' %}
+                   
+                    <!-- Add this in the manager navigation section -->
+<div class="nav-section-title">Management</div>
+
+<a href="{% url 'manage_hardware' %}" class="nav-item {% if '/hardware/' in request.path %}active{% endif %}">
+    <i class="bi bi-laptop nav-icon"></i>
+    <span class="nav-text">Inventory</span>
+    <span class="nav-badge">{{ hardware_count|default:"0" }}</span>
+</a>
+<a href="{% url 'add_hardware' %}" class="nav-item {% if '/hardware/' in request.path %}active{% endif %}">
+    <i class="bi bi-laptop nav-icon"></i>
+    <span class="nav-text">Add Hardware</span>
+</a>
+
+<a href="{% url 'create_employee' %}" class="nav-item {% if '/employee/' in request.path %}active{% endif %}">
+    <i class="bi bi-people nav-icon"></i>
+    <span class="nav-text">Employees</span>
+    <span class="nav-badge">{{ employee_count|default:"0" }}</span>
+</a>
+
+<a href="{% url 'bulk_create_employees' %}" class="nav-item {% if '/bulk-create-employees' in request.path %}active{% endif %}">
+    <i class="bi bi-file-earmark-excel nav-icon"></i>
+    <span class="nav-text">Bulk Upload</span>
+</a>
+                    
+                    <a href="{% url 'create_project' %}" class="nav-item {% if '/project/' in request.path %}active{% endif %}">
+                        <i class="bi bi-folder nav-icon"></i>
+                        <span class="nav-text">Projects</span>
+                    </a>
+                    
+                    <div class="nav-section-title">Operations</div>
+                    
+                    <a href="{% url 'view_assignments' %}" class="nav-item {% if '/assignment/' in request.path %}active{% endif %}">
+                        <i class="bi bi-clipboard-check nav-icon"></i>
+                        <span class="nav-text">Assignments</span>
+                        <span class="nav-badge">{{ assignment_count|default:"0" }}</span>
+                    </a>
+                        <a href="{% url 'create_assignment' %}" class="nav-item {% if '/assignment/' in request.path %}active{% endif %}">
+                        <i class="bi bi-clipboard-check nav-icon"></i>
+                        <span class="nav-text">Create Assignment</span>
+                        <span class="nav-badge">{{ assignment_count|default:"0" }}</span>
+                    </a>
+                        <a href="{% url 'view_assignments' %}?pending=1" class="nav-item {% if '/assignment/' in request.path %}active{% endif %}">
+                        <i class="bi bi-clipboard-check nav-icon"></i>
+                        <span class="nav-text">Pending Returns</span>
+                        <span class="nav-badge">{{ assignment_count|default:"0" }}</span>
+                    </a>
+                    
+                    <div class="nav-section-title">Verification</div>
+                    
+                    <a href="{% url 'view_serial_entries' %}" class="nav-item {% if '/serial-entries' in request.path %}active{% endif %}">
+                        <i class="bi bi-list-check nav-icon"></i>
+                        <span class="nav-text">Verification</span>
+                        <span class="nav-badge" id="pendingSerialBadge"></span>
+                    </a>
+                    
+                    <a href="{% url 'manager_verification_status' %}" class="nav-item {% if '/verification-status' in request.path %}active{% endif %}">
+                        <i class="bi bi-shield-check nav-icon"></i>
+                        <span class="nav-text">Verification Status</span>
+                    </a>
+                    
+                    <div class="nav-section-title">Transfer Management</div>
+                    <a href="{% url 'manager_transfer_requests' %}" class="nav-item">
+                        <i class="bi bi-arrow-left-right nav-icon"></i>
+                        <span class="nav-text">Transfer Requests</span>
+                    </a>
+                    
+                    <div class="nav-section-title">
+                        <i class="bi bi-stars me-1"></i> AI Assistant
+                    </div>
+
+                    <a href="{% url 'chatbot' %}" class="nav-item {% if '/chatbot' in request.path %}active{% endif %}">
+                        <i class="bi bi-robot nav-icon"></i>
+                        <span class="nav-text">Hardware AI Bot</span>
+                        <span class="nav-badge bg-gradient-ai">
+                            <i class="bi bi-lightning-charge"></i> AI
+                        </span>
+                    </a>
+
+                    <a href="#" class="nav-item" data-bs-toggle="modal" data-bs-target="#aiHelpModal">
+                        <i class="bi bi-question-circle nav-icon"></i>
+                        <span class="nav-text">AI Help</span>
+                    </a>
+                    
+                    {% else %}
+                    <div class="nav-section-title">My Work</div>
+                    
+                    <a href="{% url 'view_my_assignments' %}" class="nav-item {% if '/my-assignments' in request.path %}active{% endif %}">
+                        <i class="bi bi-clipboard-data nav-icon"></i>
+                        <span class="nav-text">My Assignments</span>
+                    </a>
+                    
+                    <a href="{% url 'my_hardware' %}" class="nav-item {% if '/my-hardware' in request.path %}active{% endif %}">
+                        <i class="bi bi-laptop nav-icon"></i>
+                        <span class="nav-text">My Hardware</span>
+                    </a>
+                    
+                    <div class="nav-section-title">Transfers</div>
+                    <a href="{% url 'my_transfers' %}" class="nav-item">
+                        <i class="bi bi-arrow-left-right nav-icon"></i>
+                        <span class="nav-text">My Transfers</span>
+                    </a>
+                    <a href="{% url 'request_hardware_transfer' %}" class="nav-item">
+                        <i class="bi bi-plus-circle nav-icon"></i>
+                        <span class="nav-text">Request Transfer</span>
+                    </a>
+                    {% endif %}
+                    
+                    <div class="nav-section-title">Settings</div>
+                    
+                    <!-- <a href="{% url 'change_password' %}" class="nav-item {% if request.path == '/change-password/' %}active{% endif %}">
+                        <i class="bi bi-gear nav-icon"></i>
+                        <span class="nav-text">Change Password</span>
+                    </a> -->
+                       <a href="{% url 'profile' %}" class="nav-item {% if request.path == '/profile/' %}active{% endif %}">
+                        <i class="bi bi-gear nav-icon"></i>
+                        <span class="nav-text">Your Profile<span>
+                    </a>
+                    
+                    <a href="{% url 'logout' %}" class="nav-item">
+                        <i class="bi bi-box-arrow-right nav-icon"></i>
+                        <span class="nav-text">Logout</span>
+                    </a>
+                </nav>
+            {% endif %}
+            
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar">
+                        <i class="bi bi-person"></i>
+                    </div>
+                    <div class="user-details">
+                        <h6 class="mb-0">{{ user.get_full_name|default:user.username }}</h6>
+                        <small>
+                            <span class="badge {% if user.is_first_login %}bg-warning{% else %}bg-info{% endif %} text-white">
+                                {{ user.get_user_type_display }}
+                            </span>
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        
+        <main class="main-content">
+            <header class="top-nav">
+                <div class="page-title d-flex align-items-center">
+                    <button class="mobile-menu-btn" id="mobileMenuBtn">
+                        <i class="bi bi-list"></i>
+                    </button>
+                    <div>
+                        <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+                        <p class="mb-0">{% block page_subtitle %}Welcome back, {{ user.get_full_name|default:user.username }}!{% endblock %}</p>
+                    </div>
+                </div>
+                
+                <div class="top-nav-actions">
+                    {% if user.user_type == 'manager' and not user.is_first_login %}
+                    <div class="quick-actions">
+                        <a href="{% url 'add_hardware' %}" class="btn-action primary">
+                            <i class="bi bi-plus-circle"></i>
+                            <span>Add Hardware</span>
+                        </a>
+                        <a href="{% url 'create_assignment' %}" class="btn-action">
+                            <i class="bi bi-clipboard-plus"></i>
+                            <span>New Assignment</span>
+                        </a>
+                        <a href="{% url 'manager_auto_verify_page' %}" class="btn-action">
+                            <i class="bi bi-cloud-upload"></i>
+                            <span>Auto Verify</span>
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </header>
+            
+            <div class="content-area">
+                {% if user.user_type == 'employee' and user.is_first_login %}
+                <div class="first-login-banner">
+                    <div>
+                        <i class="bi bi-shield-lock fs-4 me-2"></i>
+                        <strong>First Login Detected!</strong> Please change your password to continue.
+                    </div>
+                    <a href="{% url 'change_password' %}" class="btn btn-light">
+                        <i class="bi bi-key"></i> Change Password
+                    </a>
+                </div>
+                {% endif %}
+                
+                {% if messages %}
+                <div class="messages-container">
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        <i class="bi bi-{% if message.tags == 'success' %}check-circle-fill{% elif message.tags == 'error' %}exclamation-circle-fill{% elif message.tags == 'warning' %}exclamation-triangle-fill{% else %}info-circle-fill{% endif %}"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                {% block content %}{% endblock %}
+            </div>
+            
+            <footer class="main-footer">
+                <div class="copyright">
+                    <i class="bi bi-c-circle"></i> 2000-{% now "Y" %} Eduquity. All rights reserved.
+                    <br>
+                    <small>Thought-leader in the Indian assessment industry since 2000</small>
+                </div>
+            </footer>
+        </main>
+    </div>
+    
+    <div class="modal fade" id="aiHelpModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header" style="background: linear-gradient(135deg, #E04D00, #FF6B1A); color: white;">
+                    <h5 class="modal-title">
+                        <i class="bi bi-robot me-2"></i>AI Assistant Help
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-lightbulb"></i>
+                        <strong>Pro Tip:</strong> Ask natural language questions like you would ask a colleague!
+                    </div>
+                    
+                    <h6 class="mt-3"><i class="bi bi-chat-dots text-primary"></i> What you can ask:</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="fw-semibold mb-1">📊 Hardware Status</div>
+                                <ul class="small text-muted">
+                                    <li>"How many laptops are available?"</li>
+                                    <li>"Show hardware distribution by type"</li>
+                                    <li>"Which hardware needs maintenance?"</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="fw-semibold mb-1">📋 Assignments</div>
+                                <ul class="small text-muted">
+                                    <li>"Show all active assignments"</li>
+                                    <li>"What's overdue?"</li>
+                                    <li>"List assignments due this week"</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="fw-semibold mb-1">👥 Employee Hardware</div>
+                                <ul class="small text-muted">
+                                    <li>"Show hardware for [employee name]"</li>
+                                    <li>"Who has the most hardware?"</li>
+                                    <li>"Employee assignment summary"</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="fw-semibold mb-1">🔐 Verification</div>
+                                <ul class="small text-muted">
+                                    <li>"Verification progress report"</li>
+                                    <li>"Show pending verifications"</li>
+                                    <li>"Verification completion rate"</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="text-center">
+                        <i class="bi bi-magic text-primary"></i>
+                        <small class="text-muted d-block">Powered by AI • Get instant answers to your hardware questions</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+                        <i class="bi bi-check-lg"></i> Got it
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if user.user_type == 'manager' %}
+    <div class="floating-chat-btn" id="floatingChatBtn">
+        <a href="{% url 'chatbot' %}" class="chat-trigger" title="Ask AI Assistant">
+            <i class="bi bi-robot"></i>
+            <span class="chat-badge">AI</span>
+        </a>
+    </div>
+    {% endif %}
+    
+    {% else %}
+    <div class="container">
+        {% block auth_content %}{% endblock %}
+    </div>
+    {% endif %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    
+    <script>
+        $(document).ready(function() {
+            $('#mobileMenuBtn').click(function(e) {
+                e.stopPropagation();
+                $('#sidebar').addClass('show');
+                $('#overlay').addClass('show');
+                $('body').css('overflow', 'hidden');
+            });
+            
+            $('#overlay').click(function() {
+                $('#sidebar').removeClass('show');
+                $(this).removeClass('show');
+                $('body').css('overflow', 'auto');
+            });
+            
+            setTimeout(function() {
+                $('.alert').fadeOut(300, function() {
+                    $(this).remove();
+                });
+            }, 5000);
+            
+            $(window).resize(function() {
+                if ($(window).width() > 992) {
+                    $('#sidebar').removeClass('show');
+                    $('#overlay').removeClass('show');
+                    $('body').css('overflow', 'auto');
+                }
+            });
+            
+            function updateBadgeCounts() {
+                $('.nav-badge').each(function() {
+                    if ($(this).text() === '0' || $(this).text() === '') {
+                        $(this).hide();
+                    } else {
+                        $(this).show();
+                    }
+                });
+            }
+            updateBadgeCounts();
+            
+            function checkIcons() {
+                $('.bi').each(function() {
+                    if ($(this).css('display') === 'none') {
+                        $(this).css('display', 'inline-block');
+                    }
+                });
+            }
+            setTimeout(checkIcons, 500);
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% block title %}Hardware Types - Eduquity Hardware Management{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2>Hardware Types</h2>
+                <p class="text-muted">Manage hardware types/categories</p>
+            </div>
+            <a href="{% url 'manage_hardware' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Hardware
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-plus-circle"></i> Add New Hardware Type
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{% url 'manage_hardware_types' %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Type Name *</label>
+                        <input type="text" class="form-control" id="name" name="name" 
+                               placeholder="e.g., Laptop, Charger, Firewall" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" 
+                                  rows="3" placeholder="Type description..."></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-eduquity">
+                        <i class="bi bi-save"></i> Add Hardware Type
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-tags"></i> Existing Hardware Types
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Type Name</th>
+                                <th>Description</th>
+                                <th>Count</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for hw_type in hardware_types %}
+                            <tr>
+                                <td><strong>{{ hw_type.name }}</strong></td>
+                                <td>{{ hw_type.description|default:"-"|truncatechars:30 }}</td>
+                                <td>
+                                    <span class="badge bg-info">{{ hw_type.hardware_set.count }}</span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center py-4">
+                                    <i class="bi bi-tags display-4 text-muted"></i>
+                                    <h4 class="mt-3">No Hardware Types</h4>
+                                    <p class="text-muted">Add your first hardware type</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-info-circle"></i> Default Hardware Types
+                </h4>
+            </div>
+            <div class="card-body">
+                <p>Common hardware types used in assessment systems:</p>
+                <div class="row">
+                    <div class="col-md-3">
+                        <ul class="list-group">
+                            <li class="list-group-item">Laptop</li>
+                            <li class="list-group-item">Charger</li>
+                            <li class="list-group-item">Firewall</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-3">
+                        <ul class="list-group">
+                            <li class="list-group-item">CADC Box</li>
+                            <li class="list-group-item">Barcode Scanner</li>
+                            <li class="list-group-item">L1 Device</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-3">
+                        <ul class="list-group">
+                            <li class="list-group-item">Tatwik</li>
+                            <li class="list-group-item">Camera</li>
+                            <li class="list-group-item">Router</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-3">
+                        <ul class="list-group">
+                            <li class="list-group-item">Switch</li>
+                            <li class="list-group-item">Printer</li>
+                            <li class="list-group-item">Tablet</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,380 @@
+{% extends 'base.html' %}
+{% block title %}Request Hardware Transfer - Eduquity Hardware Management{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2><i class="bi bi-share"></i> Request Hardware Transfer</h2>
+                <p class="text-muted">Request hardware transfer from another employee</p>
+            </div>
+            <div>
+                <a href="{% url 'my_transfers' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to My Transfers
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-share"></i> Transfer Request Details
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="transferForm">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="to_employee_id" class="form-label">Transfer To Employee *</label>
+                                <select class="form-select" id="to_employee_id" name="to_employee_id" required>
+                                    <option value="">Select employee</option>
+                                    {% for emp in employees %}
+                                    <option value="{{ emp.id }}" data-exam-city="{{ emp.current_exam_city|default:'Not Assigned' }}">
+                                        {{ emp.get_full_name|default:emp.username }} - 
+                                        Current City: {{ emp.current_exam_city|default:'Not Assigned' }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <small class="text-muted">Select the employee who will receive this hardware</small>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="transfer_type" class="form-label">Transfer Type *</label>
+                                <select class="form-select" id="transfer_type" name="transfer_type" required>
+                                    <option value="temporary">Temporary Transfer (Will be returned)</option>
+                                    <option value="permanent">Permanent Transfer</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row" id="return_date_div" style="display: none;">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="expected_return_date" class="form-label">Expected Return Date</label>
+                                <input type="date" class="form-control" id="expected_return_date" name="expected_return_date">
+                                <small class="text-muted">When will the hardware be returned?</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="expected_arrival_date" class="form-label">Expected Arrival Date *</label>
+                                <input type="date" class="form-control" id="expected_arrival_date" name="expected_arrival_date" required min="{{ today|date:'Y-m-d' }}">
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="delivery_method" class="form-label">Delivery Method</label>
+                                <select class="form-select" id="delivery_method" name="delivery_method">
+                                    <option value="">Select delivery method</option>
+                                    <option value="courier">Courier Service</option>
+                                    <option value="hand_delivery">Hand Delivery</option>
+                                    <option value="office_transfer">Office Transfer</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Hardware Selection Table -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Select Hardware Items to Transfer *</label>
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th width="50px">
+                                            <div class="form-check">
+                                                <input type="checkbox" class="form-check-input" id="selectAll">
+                                            </div>
+                                        </th>
+                                        <th>Hardware Type</th>
+                                        <th>Serial Number</th>
+                                        <th>Model</th>
+                                        <th>Brand</th>
+                                        <th>Current Location</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for hardware in my_hardware %}
+                                    <tr>
+                                        <td>
+                                            <div class="form-check">
+                                                <input type="checkbox" class="form-check-input hardware-checkbox" 
+                                                       name="hardware_ids" value="{{ hardware.id }}"
+                                                       data-serial="{{ hardware.serial_number }}"
+                                                       data-type="{{ hardware.hardware_type }}"
+                                                       data-model="{{ hardware.model_name }}"
+                                                       data-brand="{{ hardware.brand|default:'-' }}">
+                                            </div>
+                                        </td>
+                                        <td>{{ hardware.hardware_type }}</td>
+                                        <td><code>{{ hardware.serial_number }}</code></td>
+                                        <td>{{ hardware.model_name }}</td>
+                                        <td>{{ hardware.brand|default:"-" }}</td>
+                                        <td><span class="badge bg-info">{{ hardware.current_exam_city }}</span></td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="6" class="text-center py-4">
+                                            <i class="bi bi-inbox display-4 text-muted"></i>
+                                            <p class="mt-2">No hardware items assigned to you</p>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="selectedCount" class="mt-2">
+                            <small class="text-muted">Selected: <span id="selectedCountValue">0</span> items</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Selected Hardware Items Summary (MISSING SECTION - ADDED) -->
+                    <div class="mb-4" id="selectedItemsSection" style="display: none;">
+                        <label class="form-label fw-bold text-success">
+                            <i class="bi bi-check-circle"></i> Selected Hardware Items to Transfer
+                        </label>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-success">
+                                <thead class="table-success">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Hardware Type</th>
+                                        <th>Serial Number</th>
+                                        <th>Model</th>
+                                        <th>Brand</th>
+                                        <th>Current Location</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="selectedItemsBody">
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted">No items selected</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label for="reason" class="form-label">Reason for Transfer *</label>
+                                <textarea class="form-control" id="reason" name="reason" rows="3" required></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label for="requester_notes" class="form-label">Additional Notes</label>
+                                <textarea class="form-control" id="requester_notes" name="requester_notes" rows="2"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Transfer Process:</strong>
+                        <ol class="mb-0 mt-2">
+                            <li>Select the hardware items you want to transfer</li>
+                            <li>Submit request for manager approval</li>
+                            <li>Once approved, initiate the transfer</li>
+                            <li>The receiving employee will confirm receipt</li>
+                            <li>Only selected items will be transferred</li>
+                        </ol>
+                    </div>
+                    
+                    <div class="d-flex justify-content-end">
+                        <a href="{% url 'my_transfers' %}" class="btn btn-outline-secondary me-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
+                            <i class="bi bi-send"></i> Submit Transfer Request
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Select All functionality
+        const selectAllCheckbox = document.getElementById('selectAll');
+        const hardwareCheckboxes = document.querySelectorAll('.hardware-checkbox');
+        const selectedCountSpan = document.getElementById('selectedCountValue');
+        const submitBtn = document.getElementById('submitBtn');
+        const selectedItemsSection = document.getElementById('selectedItemsSection');
+        const selectedItemsBody = document.getElementById('selectedItemsBody');
+        
+        function updateSelectedItemsTable() {
+            const selectedItems = [];
+            hardwareCheckboxes.forEach(cb => {
+                if (cb.checked) {
+                    const row = cb.closest('tr');
+                    const hardwareType = row.cells[1]?.innerText || '';
+                    const serialNumber = row.cells[2]?.innerText || '';
+                    const model = row.cells[3]?.innerText || '';
+                    const brand = row.cells[4]?.innerText || '';
+                    const location = row.cells[5]?.innerText || '';
+                    
+                    selectedItems.push({
+                        type: hardwareType,
+                        serial: serialNumber,
+                        model: model,
+                        brand: brand,
+                        location: location
+                    });
+                }
+            });
+            
+            if (selectedItems.length > 0) {
+                selectedItemsSection.style.display = 'block';
+                let html = '';
+                selectedItems.forEach((item, index) => {
+                    html += `
+                        <tr>
+                            <td>${index + 1}</td
+                            <td>${item.type}</td
+                            <td><code>${item.serial}</code></td
+                            <td>${item.model}</td
+                            <td>${item.brand}</td
+                            <td><span class="badge bg-info">${item.location}</span></td
+                         </tr
+                    `;
+                });
+                selectedItemsBody.innerHTML = html;
+            } else {
+                selectedItemsSection.style.display = 'none';
+                selectedItemsBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No items selected</td></tr>';
+            }
+        }
+        
+        function updateSelectedCount() {
+            const checkedCount = document.querySelectorAll('.hardware-checkbox:checked').length;
+            selectedCountSpan.textContent = checkedCount;
+            submitBtn.disabled = checkedCount === 0;
+            
+            // Update select all checkbox state
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = checkedCount === hardwareCheckboxes.length;
+                selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < hardwareCheckboxes.length;
+            }
+            
+            // Update selected items table
+            updateSelectedItemsTable();
+        }
+        
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function() {
+                hardwareCheckboxes.forEach(cb => {
+                    cb.checked = selectAllCheckbox.checked;
+                });
+                updateSelectedCount();
+            });
+        }
+        
+        hardwareCheckboxes.forEach(cb => {
+            cb.addEventListener('change', updateSelectedCount);
+        });
+        
+        updateSelectedCount();
+        
+        // Transfer type toggle
+        const transferType = document.getElementById('transfer_type');
+        const returnDateDiv = document.getElementById('return_date_div');
+        
+        transferType.addEventListener('change', function() {
+            if (this.value === 'temporary') {
+                returnDateDiv.style.display = 'block';
+            } else {
+                returnDateDiv.style.display = 'none';
+                document.getElementById('expected_return_date').value = '';
+            }
+        });
+        
+        // Show selected employee info
+        const employeeSelect = document.getElementById('to_employee_id');
+        const selectedCityDisplay = document.createElement('div');
+        selectedCityDisplay.className = 'mt-2 alert alert-info';
+        selectedCityDisplay.style.display = 'none';
+        employeeSelect.parentNode.appendChild(selectedCityDisplay);
+        
+        employeeSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const city = selectedOption.dataset.examCity;
+            if (city && city !== 'Not Assigned') {
+                selectedCityDisplay.innerHTML = `<i class="bi bi-geo-alt"></i> Receiving employee is currently in: <strong>${city}</strong>`;
+                selectedCityDisplay.style.display = 'block';
+            } else {
+                selectedCityDisplay.style.display = 'none';
+            }
+        });
+        
+        // Form validation before submit
+        const transferForm = document.getElementById('transferForm');
+        transferForm.addEventListener('submit', function(e) {
+            const selectedCount = document.querySelectorAll('.hardware-checkbox:checked').length;
+            if (selectedCount === 0) {
+                e.preventDefault();
+                alert('Please select at least one hardware item to transfer.');
+                return false;
+            }
+            
+            const employeeSelected = employeeSelect.value;
+            if (!employeeSelected) {
+                e.preventDefault();
+                alert('Please select an employee to transfer to.');
+                return false;
+            }
+            
+            const reason = document.getElementById('reason').value.trim();
+            if (!reason) {
+                e.preventDefault();
+                alert('Please provide a reason for the transfer.');
+                return false;
+            }
+            
+            const expectedArrival = document.getElementById('expected_arrival_date').value;
+            if (!expectedArrival) {
+                e.preventDefault();
+                alert('Please select an expected arrival date.');
+                return false;
+            }
+            
+            // Show confirmation with selected items count
+            return confirm(`Are you sure you want to transfer ${selectedCount} hardware item(s) to ${employeeSelect.options[employeeSelect.selectedIndex]?.text.split(' - ')[0]}?`);
+        });
+    });
+</script>
+
+<style>
+    .table-success {
+        background-color: #d1e7dd;
+    }
+    .table-success th {
+        background-color: #c3e6cb;
+    }
+    .selected-item {
+        background-color: #e8f5e9;
+    }
+    .form-check-input:checked {
+        background-color: #198754;
+        border-color: #198754;
+    }
+</style>
+{% endblock %}

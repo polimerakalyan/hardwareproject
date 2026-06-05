@@ -1,0 +1,592 @@
+{% extends 'base.html' %}
+{% block title %}Manager Dashboard - Eduquity Hardware Management{% endblock %}
+
+{% block page_title %}Manager Dashboard{% endblock %}
+{% block page_subtitle %}Welcome back, {{ user.first_name|default:user.username }}! Here's an overview of your hardware management system.{% endblock %}
+
+{% block content %}
+<!-- Statistics Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted text-uppercase small fw-bold">Total Employees</span>
+                        <h2 class="mb-0 fw-bold mt-2">{{ total_employees|default:"0" }}</h2>
+                    </div>
+                    <div class="stat-icon rounded-circle p-3 bg-primary bg-opacity-10">
+                        <i class="bi bi-people-fill fs-2 text-primary"></i>
+                    </div>
+                </div>
+                <div class="mt-3 d-flex justify-content-between align-items-center">
+                    <span class="{% if employee_growth >= 0 %}text-success{% else %}text-danger{% endif %} small">
+                        <i class="bi bi-arrow-{% if employee_growth >= 0 %}up{% else %}down{% endif %}-short"></i> 
+                        {{ employee_growth|default:"0"|floatformat:1 }}%
+                    </span>
+                    <a href="{% url 'create_employee' %}" class="text-primary text-decoration-none small fw-bold">
+                        View all <i class="bi bi-arrow-right-short"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted text-uppercase small fw-bold">Active Projects</span>
+                        <h2 class="mb-0 fw-bold mt-2">{{ total_projects|default:"0" }}</h2>
+                    </div>
+                    <div class="stat-icon rounded-circle p-3 bg-success bg-opacity-10">
+                        <i class="bi bi-folder-fill fs-2 text-success"></i>
+                    </div>
+                </div>
+                <div class="mt-3 d-flex justify-content-between align-items-center">
+                    <span class="{% if project_growth >= 0 %}text-success{% else %}text-danger{% endif %} small">
+                        <i class="bi bi-arrow-{% if project_growth >= 0 %}up{% else %}down{% endif %}-short"></i> 
+                        {{ project_growth|default:"0"|floatformat:1 }}%
+                    </span>
+                    <a href="{% url 'create_project' %}" class="text-success text-decoration-none small fw-bold">
+                        View all <i class="bi bi-arrow-right-short"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted text-uppercase small fw-bold">Active Assignments</span>
+                        <h2 class="mb-0 fw-bold mt-2">{{ active_assignments|default:"0" }}</h2>
+                    </div>
+                    <div class="stat-icon rounded-circle p-3 bg-warning bg-opacity-10">
+                        <i class="bi bi-clipboard-check-fill fs-2 text-warning"></i>
+                    </div>
+                </div>
+                <div class="mt-3 d-flex justify-content-between align-items-center">
+                    <span class="{% if assignment_growth >= 0 %}text-success{% else %}text-danger{% endif %} small">
+                        <i class="bi bi-arrow-{% if assignment_growth >= 0 %}up{% else %}down{% endif %}-short"></i> 
+                        {{ assignment_growth|default:"0"|floatformat:1 }}%
+                    </span>
+                    <a href="{% url 'view_assignments' %}" class="text-warning text-decoration-none small fw-bold">
+                        View all <i class="bi bi-arrow-right-short"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted text-uppercase small fw-bold">Hardware Items</span>
+                        <h2 class="mb-0 fw-bold mt-2">{{ hardware_count|default:"0" }}</h2>
+                    </div>
+                    <div class="stat-icon rounded-circle p-3 bg-info bg-opacity-10">
+                        <i class="bi bi-laptop-fill fs-2 text-info"></i>
+                    </div>
+                </div>
+                <div class="mt-3 d-flex justify-content-between align-items-center">
+                    <span class="{% if hardware_growth >= 0 %}text-success{% else %}text-danger{% endif %} small">
+                        <i class="bi bi-arrow-{% if hardware_growth >= 0 %}up{% else %}down{% endif %}-short"></i> 
+                        {{ hardware_growth|default:"0"|floatformat:1 }}%
+                    </span>
+                    <a href="{% url 'manage_hardware' %}" class="text-info text-decoration-none small fw-bold">
+                        View all <i class="bi bi-arrow-right-short"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Hardware Status Chart -->
+    <div class="col-xl-7">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center py-3">
+                <h5 class="mb-0 fw-bold">
+                    <i class="bi bi-pie-chart-fill me-2 text-primary"></i>Hardware Status Overview
+                </h5>
+                <span class="badge bg-light text-dark border px-3 py-2">
+                    Total: {{ hardware_count }} items
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div style="height: 250px;">
+                            <div class="d-flex h-100">
+                                <div class="d-flex flex-column justify-content-between me-3 text-muted small text-end" style="width: 50px;">
+                                    <span>{{ scale_values.0 }}</span>
+                                    <span>{{ scale_values.1 }}</span>
+                                    <span>{{ scale_values.2 }}</span>
+                                    <span>{{ scale_values.3 }}</span>
+                                    <span>0</span>
+                                </div>
+                                
+                                <div class="flex-grow-1 d-flex align-items-end justify-content-around">
+                                    {% for status in hardware_status %}
+                                    <div class="text-center" style="width: 90px;">
+                                        <div class="rounded mb-2" style="height: {{ status.height }}px; width: 40px; margin: 0 auto; background-color: 
+                                            {% if status.color == 'success' %}#28a745
+                                            {% elif status.color == 'warning' %}#ffc107
+                                            {% elif status.color == 'info' %}#17a2b8
+                                            {% elif status.color == 'danger' %}#dc3545
+                                            {% else %}#6c757d{% endif %}; 
+                                            transition: height 0.3s ease;"></div>
+                                        <span class="text-muted small">{{ status.name }}</span>
+                                        <br>
+                                        <strong class="small">{{ status.count }}</strong>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-flex flex-column gap-2">
+                            <div class="d-flex align-items-center justify-content-between p-2 rounded bg-light">
+                                <span><span class="badge bg-success me-2" style="width: 10px; height: 10px; padding: 0; display: inline-block;"></span> Available</span>
+                                <strong class="text-success">{{ available_count }}</strong>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between p-2 rounded bg-light">
+                                <span><span class="badge bg-warning me-2" style="width: 10px; height: 10px; padding: 0; display: inline-block;"></span> Assigned</span>
+                                <strong class="text-warning">{{ assigned_count }}</strong>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between p-2 rounded bg-light">
+                                <span><span class="badge bg-info me-2" style="width: 10px; height: 10px; padding: 0; display: inline-block;"></span> In Use</span>
+                                <strong class="text-info">{{ in_use_count }}</strong>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between p-2 rounded bg-light">
+                                <span><span class="badge bg-danger me-2" style="width: 10px; height: 10px; padding: 0; display: inline-block;"></span> Maintenance</span>
+                                <strong class="text-danger">{{ maintenance_count }}</strong>
+                            </div>
+                            <hr class="my-2">
+                            <div class="d-flex align-items-center justify-content-between p-2 rounded bg-primary bg-opacity-10">
+                                <span class="fw-bold">Total Hardware</span>
+                                <strong class="fs-5 text-primary">{{ hardware_count }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Verification Status Card -->
+    <div class="col-xl-5">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent border-0 py-3">
+                <h5 class="mb-0 fw-bold">
+                    <i class="bi bi-shield-check me-2 text-success"></i>Verification Status
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <div class="position-relative d-inline-block">
+                        <div class="progress-circle" style="width: 150px; height: 150px;">
+                            <svg viewBox="0 0 36 36" class="circular-chart">
+                                <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                <path class="circle" stroke-dasharray="{{ verification_rate }}, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                <text x="18" y="20.35" class="percentage">{{ verification_rate }}%</text>
+                            </svg>
+                        </div>
+                    </div>
+                    <h3 class="mt-3 mb-1">{{ verified_count }} / {{ verified_count|add:pending_verifications }}</h3>
+                    <p class="text-muted small">Items Verified</p>
+                </div>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="p-3 rounded bg-success bg-opacity-10">
+                            <i class="bi bi-check-circle-fill text-success fs-4"></i>
+                            <h4 class="mb-0 mt-2">{{ verified_count }}</h4>
+                            <small class="text-muted">Verified</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-3 rounded bg-warning bg-opacity-10">
+                            <i class="bi bi-clock-history text-warning fs-4"></i>
+                            <h4 class="mb-0 mt-2">{{ pending_verifications }}</h4>
+                            <small class="text-muted">Pending</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Recent Activity -->
+    <div class="col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center py-3">
+                <h5 class="mb-0 fw-bold">
+                    <i class="bi bi-clock-history me-2 text-primary"></i>Recent Activity
+                </h5>
+                <span class="badge bg-light text-dark">{{ recent_activities|length }} new</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="activity-list" style="max-height: 400px; overflow-y: auto;">
+                    {% for activity in recent_activities %}
+                    <div class="d-flex align-items-start p-3 {% if not forloop.last %}border-bottom{% endif %}">
+                        <div class="rounded-circle p-2 me-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px; background-color: 
+                            {% if activity.color == 'primary' %}#E04D10
+                            {% elif activity.color == 'success' %}#28a745
+                            {% elif activity.color == 'warning' %}#ffc107
+                            {% elif activity.color == 'info' %}#17a2b8
+                            {% elif activity.color == 'danger' %}#dc3545
+                            {% else %}#6c757d{% endif %};">
+                            <i class="bi bi-{{ activity.icon }} text-white" style="font-size: 1.2rem;"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <p class="mb-0 fw-semibold small">{{ activity.title }}</p>
+                                {% if activity.badge %}
+                                <span class="badge bg-{{ activity.color }} bg-opacity-10 text-{{ activity.color }} px-2 py-1" style="font-size: 0.65rem;">
+                                    {{ activity.badge }}
+                                </span>
+                                {% endif %}
+                            </div>
+                            <small class="text-muted d-block">{{ activity.description }}</small>
+                            <small class="text-muted">{{ activity.timestamp|timesince }} ago</small>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-activity text-muted" style="font-size: 3rem;"></i>
+                        <p class="text-muted mt-3">No recent activities</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent border-0 py-3">
+                <h5 class="mb-0 fw-bold">
+                    <i class="bi bi-lightning-charge me-2 text-warning"></i>Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <a href="{% url 'create_employee' %}" class="quick-action-card text-decoration-none d-block p-4 rounded-3 border bg-light">
+                            <i class="bi bi-person-plus fs-1 text-primary d-block mb-3"></i>
+                            <h6 class="mb-1 fw-bold">Add Employee</h6>
+                            <small class="text-muted">Register new team members</small>
+                        </a>
+                    </div>
+                    <div class="col-md-6">
+                        <a href="{% url 'create_project' %}" class="quick-action-card text-decoration-none d-block p-4 rounded-3 border bg-light">
+                            <i class="bi bi-folder-plus fs-1 text-success d-block mb-3"></i>
+                            <h6 class="mb-1 fw-bold">Create Project</h6>
+                            <small class="text-muted">Start a new project</small>
+                        </a>
+                    </div>
+                    <div class="col-md-6">
+                        <a href="{% url 'add_hardware' %}" class="quick-action-card text-decoration-none d-block p-4 rounded-3 border bg-light">
+                            <i class="bi bi-laptop fs-1 text-info d-block mb-3"></i>
+                            <h6 class="mb-1 fw-bold">Add Hardware</h6>
+                            <small class="text-muted">Add new hardware inventory</small>
+                        </a>
+                    </div>
+                    <div class="col-md-6">
+                        <a href="{% url 'create_assignment' %}" class="quick-action-card text-decoration-none d-block p-4 rounded-3 border bg-light">
+                            <i class="bi bi-clipboard-plus fs-1 text-warning d-block mb-3"></i>
+                            <h6 class="mb-1 fw-bold">Create Assignment</h6>
+                            <small class="text-muted">Assign hardware to employees</small>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Recent Assignments -->
+    <div class="col-xl-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center py-3">
+                <h5 class="mb-0 fw-bold">
+                    <i class="bi bi-clipboard-data me-2 text-primary"></i>Recent Assignments
+                </h5>
+                <a href="{% url 'view_assignments' %}" class="text-primary text-decoration-none small fw-bold">
+                    View All <i class="bi bi-arrow-right-short"></i>
+                </a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="px-3">Employee</th>
+                                <th>Project</th>
+                                <th>Date</th>
+                                <th class="px-3">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for assignment in assignments %}
+                            <tr>
+                                <td class="px-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                                            <i class="bi bi-person-fill text-primary" style="font-size: 0.9rem;"></i>
+                                        </div>
+                                        <span class="small">{{ assignment.employee.get_full_name|default:assignment.employee.username }}</span>
+                                    </div>
+                                </td>
+                                <td><span class="small">{{ assignment.project.project_name|truncatechars:20 }}</span></td>
+                                <td><span class="small">{{ assignment.assigned_date|date:"d M Y" }}</span></td>
+                                <td class="px-3">
+                                    {% if assignment.actual_return_date %}
+                                        <span class="badge bg-success px-2 py-1">Returned</span>
+                                    {% else %}
+                                        <span class="badge bg-warning px-2 py-1">Active</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center py-5">
+                                    <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                                    <p class="text-muted mt-3 mb-0">No assignments yet</p>
+                                    <a href="{% url 'create_assignment' %}" class="btn btn-sm btn-primary mt-3">Create First Assignment</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Employees -->
+    <div class="col-xl-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center py-3">
+                <h5 class="mb-0 fw-bold">
+                    <i class="bi bi-people me-2 text-primary"></i>Recent Employees
+                </h5>
+                <a href="{% url 'create_employee' %}" class="text-primary text-decoration-none small fw-bold">
+                    View All <i class="bi bi-arrow-right-short"></i>
+                </a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="px-3">Employee</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th class="px-3">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for employee in employees %}
+                            <tr>
+                                <td class="px-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                                            <i class="bi bi-person-fill text-success" style="font-size: 0.9rem;"></i>
+                                        </div>
+                                        <span class="small">{{ employee.get_full_name|default:employee.username }}</span>
+                                    </div>
+                                </td>
+                                <td><span class="small text-truncate d-inline-block" style="max-width: 150px;">{{ employee.email }}</span></td>
+                                <td><span class="small">{{ employee.phone|default:"—" }}</span></td>
+                                <td class="px-3">
+                                    {% if employee.is_active %}
+                                        <span class="badge bg-success px-2 py-1">Active</span>
+                                    {% else %}
+                                        <span class="badge bg-danger px-2 py-1">Inactive</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center py-5">
+                                    <i class="bi bi-people text-muted" style="font-size: 3rem;"></i>
+                                    <p class="text-muted mt-3 mb-0">No employees yet</p>
+                                    <a href="{% url 'create_employee' %}" class="btn btn-sm btn-primary mt-3">Add First Employee</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .stat-icon {
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .bg-opacity-10 {
+        --bs-bg-opacity: 0.1;
+    }
+    
+    .card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        border-radius: 16px;
+    }
+    
+    .card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 28px rgba(0,0,0,0.08) !important;
+    }
+    
+    .quick-action-card {
+        transition: all 0.3s ease;
+    }
+    
+    .quick-action-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        background-color: #fff !important;
+    }
+    
+    .table td {
+        vertical-align: middle;
+        padding: 0.8rem 0.5rem;
+    }
+    
+    .table th {
+        background-color: #f8fafc;
+        font-weight: 600;
+        color: #1e293b;
+        border-bottom: 2px solid #e2e8f0;
+        padding: 0.8rem 0.5rem;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .activity-list::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .activity-list::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+    
+    .activity-list::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 10px;
+    }
+    
+    .activity-list::-webkit-scrollbar-thumb:hover {
+        background: #999;
+    }
+    
+    /* Circular Progress Chart */
+    .circular-chart {
+        width: 100%;
+        height: 100%;
+        display: block;
+    }
+    
+    .circle-bg {
+        fill: none;
+        stroke: #e9ecef;
+        stroke-width: 3;
+    }
+    
+    .circle {
+        fill: none;
+        stroke: #28a745;
+        stroke-width: 3;
+        stroke-linecap: round;
+        transition: stroke-dasharray 0.5s ease;
+    }
+    
+    .percentage {
+        fill: #2c3e50;
+        font-size: 8px;
+        text-anchor: middle;
+        font-weight: bold;
+    }
+    
+    @media (max-width: 768px) {
+        .col-xl-3, .col-xl-4, .col-xl-5, .col-xl-6, .col-xl-7, .col-xl-8 {
+            margin-bottom: 20px;
+        }
+        
+        .table td, .table th {
+            font-size: 0.7rem;
+            padding: 0.5rem 0.25rem;
+        }
+        
+        .quick-action-card {
+            padding: 1rem !important;
+        }
+        
+        .quick-action-card i {
+            font-size: 1.5rem !important;
+        }
+        
+        .quick-action-card h6 {
+            font-size: 0.85rem;
+        }
+        
+        .quick-action-card small {
+            font-size: 0.7rem;
+        }
+    }
+    
+    [data-theme="dark"] .activity-list::-webkit-scrollbar-track {
+        background: #2d3748;
+    }
+    
+    [data-theme="dark"] .activity-list::-webkit-scrollbar-thumb {
+        background: #4a5568;
+    }
+    
+    [data-theme="dark"] .circle-bg {
+        stroke: #2d3748;
+    }
+    
+    [data-theme="dark"] .percentage {
+        fill: #e2e8f0;
+    }
+    
+    [data-theme="dark"] .quick-action-card {
+        background-color: #2d3748 !important;
+        border-color: #4a5568 !important;
+    }
+    
+    [data-theme="dark"] .quick-action-card:hover {
+        background-color: #374151 !important;
+    }
+    
+    [data-theme="dark"] .table th {
+        background-color: #1a202c;
+        color: #e2e8f0;
+        border-bottom-color: #2d3748;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,489 @@
+{% extends 'base.html' %}
+{% block title %}Manage Hardware - Eduquity Hardware Management{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2>Hardware Inventory</h2>
+                <p class="text-muted">Manage all hardware items in your inventory</p>
+            </div>
+            <div>
+                <a href="{% url 'add_hardware' %}" class="btn btn-outline-info me-2">
+                    <i class="bi bi-plus-circle"></i> Add Inventory
+                </a>
+                <a href="{% url 'manage_hardware_types' %}" class="btn btn-outline-info">
+                    <i class="bi bi-tags"></i> Hardware Types
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center border-0 shadow-sm">
+            <div class="card-body">
+                <h3 class="fw-bold text-primary">{{ paginator.count }}</h3>
+                <p class="text-muted mb-0">Total Items</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-0 shadow-sm">
+            <div class="card-body">
+                <h3 class="fw-bold text-success">{{ available_count }}</h3>
+                <p class="text-muted mb-0">Available</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-0 shadow-sm">
+            <div class="card-body">
+                <h3 class="fw-bold text-warning">{{ assigned_count }}</h3>
+                <p class="text-muted mb-0">Assigned</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-0 shadow-sm">
+            <div class="card-body">
+                <h3 class="fw-bold text-danger">{{ maintenance_count }}</h3>
+                <p class="text-muted mb-0">Maintenance</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="mb-0">
+                <i class="bi bi-tags"></i> Hardware Types Summary
+            </h4>
+            <a href="{% url 'manage_hardware_types' %}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-gear"></i> Manage Types
+            </a>
+        </div>
+    </div>
+    
+    {% for type in hardware_types %}
+    {% with type_id=type.id %}
+    {% with item_count=hardware_items_count|default:0 %}
+    {% with type_count=hardware_items_count_dict|get_item:type_id %}
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card h-100 border-0 shadow-sm hover-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">{{ type.name }}</h6>
+                        <h2 class="mb-0 fw-bold">{{ type_count|default:0 }}</h2>
+                        <small class="text-muted">
+                            {% if type_count == 1 %}
+                            1 item
+                            {% else %}
+                            {{ type_count|default:0 }} items
+                            {% endif %}
+                        </small>
+                    </div>
+                    <div class="bg-light p-3 rounded-circle">
+                        <i class="bi bi-{{ type.icon|default:'laptop' }} fs-4 text-primary"></i>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="badge text-primary">
+                            <i class="bi bi-box-seam"></i> 
+                            {% widthratio type_count|default:0 paginator.count 100 %}%
+                        </span>
+                        <a href="?type={{ type.id }}" class="btn btn-sm btn-link text-decoration-none">
+                            View <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endwith %}
+    {% endwith %}
+    {% endwith %}
+    {% empty %}
+    <div class="col-12">
+        <div class="card border-0 shadow-sm bg-light">
+            <div class="card-body text-center py-4">
+                <i class="bi bi-tag display-4 text-muted"></i>
+                <h5 class="mt-3">No Hardware Types</h5>
+                <p class="text-muted">Create hardware types to categorize your items</p>
+                <a href="{% url 'manage_hardware_types' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Add Hardware Type
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="GET" action="" class="row g-3">
+                    <div class="col-md-5">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" 
+                                   class="form-control" 
+                                   name="search" 
+                                   placeholder="Search by serial number, model, brand..." 
+                                   value="{{ search_query }}">
+                            {% if search_query %}
+                            <a href="?{% if type_filter %}type={{ type_filter }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}" 
+                               class="btn btn-outline-secondary">
+                                <i class="bi bi-x"></i> Clear
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <select name="type" class="form-select">
+                            <option value="all" {% if type_filter == 'all' or not type_filter %}selected{% endif %}>
+                                All Hardware Types
+                            </option>
+                            {% for type in hardware_types %}
+                            <option value="{{ type.id }}" {% if type_filter|stringformat:"s" == type.id|stringformat:"s" %}selected{% endif %}>
+                                {{ type.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <select name="status" class="form-select">
+                            <option value="all" {% if status_filter == 'all' or not status_filter %}selected{% endif %}>
+                                All Status
+                            </option>
+                            <option value="available" {% if status_filter == 'available' %}selected{% endif %}>Available</option>
+                            <option value="assigned" {% if status_filter == 'assigned' %}selected{% endif %}>Assigned</option>
+                            <option value="in_use" {% if status_filter == 'in_use' %}selected{% endif %}>In Use</option>
+                            <option value="maintenance" {% if status_filter == 'maintenance' %}selected{% endif %}>Maintenance</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-1">
+                        <button type="submit" class="btn btn-eduquity w-100">
+                            <i class="bi bi-funnel"></i> Filter
+                        </button>
+                    </div>
+                    
+                    {% if search_query or type_filter and type_filter != 'all' or status_filter and status_filter != 'all' %}
+                    <div class="col-12 mt-2">
+                        <div class="d-flex align-items-center">
+                            <span class="text-muted me-2">Active filters:</span>
+                            {% if search_query %}
+                            <span class="badge bg-primary me-1 p-2">
+                                Search: "{{ search_query }}"
+                                <a href="?{% if type_filter and type_filter != 'all' %}type={{ type_filter }}&{% endif %}{% if status_filter and status_filter != 'all' %}status={{ status_filter }}&{% endif %}" 
+                                   class="text-white ms-1">
+                                    <i class="bi bi-x"></i>
+                                </a>
+                            </span>
+                            {% endif %}
+                            {% if type_filter and type_filter != 'all' %}
+                            <span class="badge bg-info me-1 p-2">
+                                Type: {% for type in hardware_types %}{% if type.id|stringformat:"s" == type_filter %}{{ type.name }}{% endif %}{% endfor %}
+                                <a href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if status_filter and status_filter != 'all' %}status={{ status_filter }}&{% endif %}" 
+                                   class="text-white ms-1">
+                                    <i class="bi bi-x"></i>
+                                </a>
+                            </span>
+                            {% endif %}
+                            {% if status_filter and status_filter != 'all' %}
+                            <span class="badge bg-warning p-2">
+                                Status: {{ status_filter|title }}
+                                <a href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if type_filter and type_filter != 'all' %}type={{ type_filter }}&{% endif %}" 
+                                   class="text-white ms-1">
+                                    <i class="bi bi-x"></i>
+                                </a>
+                            </span>
+                            {% endif %}
+                            <a href="{% url 'manage_hardware' %}" class="btn btn-sm btn-outline-secondary ms-2">
+                                <i class="bi bi-eraser"></i> Clear All
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">
+                    <i class="bi bi-laptop"></i> Hardware Items
+                </h4>
+                <span class="badge bg-light text-dark">
+                    Showing {{ page_obj.start_index }} - {{ page_obj.end_index }} of {{ paginator.count }} items
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Serial Number</th>
+                                <th>Model</th>
+                                <th>Brand</th>
+                                <th>Status</th>
+                                <th>Added On</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for hardware in hardware_items %}
+                            <tr>
+                                <td>{{ hardware.hardware_type.name }}</td>
+                                <td><strong>{{ hardware.serial_number }}</strong></td>
+                                <td>{{ hardware.model_name }}</td>
+                                <td>{{ hardware.brand|default:"-" }}</td>
+                                <td>
+                                    {% if hardware.status == 'available' %}
+                                        <span class="badge bg-success">Available</span>
+                                    {% elif hardware.status == 'assigned' %}
+                                        <span class="badge bg-warning">Assigned</span>
+                                    {% elif hardware.status == 'in_use' %}
+                                        <span class="badge bg-info">In Use</span>
+                                    {% elif hardware.status == 'maintenance' %}
+                                        <span class="badge bg-danger">Maintenance</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ hardware.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ hardware.created_at|date:"d/m/Y" }}</td>
+                                <td>
+                                    {% if hardware.status == 'available' %}
+                                        <a href="{% url 'edit_hardware' hardware.id %}" class="btn btn-sm btn-outline-warning">
+                                            <i class="bi bi-pencil"></i> Edit
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ hardware.id }}">
+                                            <i class="bi bi-trash"></i> Delete
+                                        </button>
+                                    {% else %}
+                                        <button type="button" class="btn btn-sm btn-outline-secondary disabled-btn" disabled title="Cannot edit - Hardware is {{ hardware.status }}">
+                                            <i class="bi bi-pencil"></i> Edit
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary disabled-btn" disabled title="Cannot delete - Hardware is {{ hardware.status }}">
+                                            <i class="bi bi-trash"></i> Delete
+                                        </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            
+                            <!-- Delete Modal (Only for available hardware) -->
+                            {% if hardware.status == 'available' %}
+                            <div class="modal fade" id="deleteModal{{ hardware.id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header bg-danger text-white">
+                                            <h5 class="modal-title">Delete Hardware</h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>Are you sure you want to delete this hardware item?</p>
+                                            <div class="alert alert-warning">
+                                                <strong>{{ hardware.hardware_type.name }} - {{ hardware.serial_number }}</strong><br>
+                                                {{ hardware.model_name }} | {{ hardware.brand|default:"No Brand" }}
+                                            </div>
+                                            <div class="alert alert-danger">
+                                                <i class="bi bi-exclamation-triangle"></i>
+                                                <strong>Warning:</strong> This action cannot be undone. The hardware item will be permanently deleted.
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <form method="POST" action="{% url 'delete_hardware' hardware.id %}" style="display: inline;">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-danger">Yes, Delete Hardware</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center py-4">
+                                    <i class="bi bi-laptop display-4 text-muted"></i>
+                                    <h4 class="mt-3">No Hardware Items Found</h4>
+                                    <p class="text-muted">
+                                        {% if search_query or type_filter and type_filter != 'all' or status_filter and status_filter != 'all' %}
+                                            No items match your search criteria. 
+                                            <a href="{% url 'manage_hardware' %}">Clear filters</a> to see all items.
+                                        {% else %}
+                                            Start by adding your first hardware item
+                                        {% endif %}
+                                    </p>
+                                    <a href="{% url 'add_hardware' %}" class="btn btn-eduquity">
+                                        <i class="bi bi-plus-circle"></i> Add Hardware
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                {% if page_obj.has_other_pages %}
+                <nav aria-label="Hardware items pagination" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if type_filter and type_filter != 'all' %}&type={{ type_filter }}{% endif %}{% if status_filter and status_filter != 'all' %}&status={{ status_filter }}{% endif %}" aria-label="First">
+                                <span aria-hidden="true">&laquo;&laquo;</span>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if type_filter and type_filter != 'all' %}&type={{ type_filter }}{% endif %}{% if status_filter and status_filter != 'all' %}&status={{ status_filter }}{% endif %}" aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">&laquo;&laquo;</span>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link">&laquo;</span>
+                        </li>
+                        {% endif %}
+                        
+                        {% for i in page_obj.paginator.page_range %}
+                            {% if page_obj.number == i %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ i }}</span>
+                            </li>
+                            {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ i }}{% if search_query %}&search={{ search_query }}{% endif %}{% if type_filter and type_filter != 'all' %}&type={{ type_filter }}{% endif %}{% if status_filter and status_filter != 'all' %}&status={{ status_filter }}{% endif %}">{{ i }}</a>
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if type_filter and type_filter != 'all' %}&type={{ type_filter }}{% endif %}{% if status_filter and status_filter != 'all' %}&status={{ status_filter }}{% endif %}" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if type_filter and type_filter != 'all' %}&type={{ type_filter }}{% endif %}{% if status_filter and status_filter != 'all' %}&status={{ status_filter }}{% endif %}" aria-label="Last">
+                                <span aria-hidden="true">&raquo;&raquo;</span>
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">&raquo;</span>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link">&raquo;&raquo;</span>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .hover-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .hover-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    }
+    .bg-opacity-10 {
+        --bs-bg-opacity: 0.1;
+    }
+    
+    /* Disabled button styling */
+    .disabled-btn {
+        cursor: not-allowed !important;
+        opacity: 0.5;
+        pointer-events: auto !important;
+    }
+    
+    .disabled-btn:hover::after {
+        content: attr(title);
+        position: absolute;
+        background: #333;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-size: 12px;
+        white-space: nowrap;
+        z-index: 1000;
+        transform: translateY(-25px);
+        margin-left: -20px;
+    }
+    
+    .btn-outline-secondary.disabled-btn {
+        background-color: #e9ecef;
+        border-color: #dee2e6;
+        color: #6c757d;
+    }
+</style>
+
+<script>
+    // Optional: Add confirmation message for delete
+    document.addEventListener('DOMContentLoaded', function() {
+        const deleteForms = document.querySelectorAll('.delete-form');
+        deleteForms.forEach(form => {
+            form.addEventListener('submit', function(e) {
+                if (!confirm('Are you sure you want to delete this hardware item? This action cannot be undone.')) {
+                    e.preventDefault();
+                }
+            });
+        });
+        
+        // Add tooltip behavior for disabled buttons
+        const disabledBtns = document.querySelectorAll('.disabled-btn');
+        disabledBtns.forEach(btn => {
+            btn.addEventListener('mouseenter', function(e) {
+                const title = this.getAttribute('title');
+                if (title) {
+                    const tooltip = document.createElement('div');
+                    tooltip.className = 'custom-tooltip';
+                    tooltip.textContent = title;
+                    tooltip.style.position = 'absolute';
+                    tooltip.style.background = '#333';
+                    tooltip.style.color = '#fff';
+                    tooltip.style.padding = '5px 10px';
+                    tooltip.style.borderRadius = '5px';
+                    tooltip.style.fontSize = '12px';
+                    tooltip.style.zIndex = '1000';
+                    tooltip.style.whiteSpace = 'nowrap';
+                    document.body.appendChild(tooltip);
+                    
+                    const rect = this.getBoundingClientRect();
+                    tooltip.style.left = rect.left + 'px';
+                    tooltip.style.top = (rect.top - 30) + 'px';
+                    
+                    this.addEventListener('mouseleave', function() {
+                        tooltip.remove();
+                    });
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

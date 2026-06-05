@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% block title %}Manager Registration - Eduquity Hardware Management{% endblock %}
+
+{% block auth_content %}
+<div class="login-container">
+    <div class="logo-container">
+        <div class="logo" style="background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);">
+            <i class="bi bi-person-badge"></i>
+        </div>
+        <h3>Manager Registration</h3>
+        <p class="text-muted">Create a new manager account</p>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                <i class="bi bi-exclamation-circle"></i> {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="POST" action="{% url 'manager_register' %}">
+        {% csrf_token %}
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="username" class="form-label">Username *</label>
+                <input type="text" class="form-control" id="username" name="username" 
+                       placeholder="Choose username" required>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="email" class="form-label">Email Address *</label>
+                <input type="email" class="form-control" id="email" name="email" 
+                       placeholder="your.email@eduquity.com" required>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label for="phone" class="form-label">Phone Number</label>
+            <input type="tel" class="form-control" id="phone" name="phone" 
+                   placeholder="+91 9876543210">
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="password" class="form-label">Password *</label>
+                <input type="password" class="form-control" id="password" name="password" 
+                       placeholder="Enter password" required>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="confirm_password" class="form-label">Confirm Password *</label>
+                <input type="password" class="form-control" id="confirm_password" name="confirm_password" 
+                       placeholder="Confirm password" required>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <small class="text-muted">
+                <i class="bi bi-info-circle"></i> Password must be at least 8 characters long
+            </small>
+        </div>
+
+        <button type="submit" class="btn btn-eduquity w-100">
+            <i class="bi bi-person-plus"></i> Register as Manager
+        </button>
+    </form>
+
+    <div class="mt-4 text-center">
+        <p class="mb-0">Already have an account?</p>
+        <a href="{% url 'login' %}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-box-arrow-in-right"></i> Sign In
+        </a>
+    </div>
+</div>
+
+<div class="text-center mt-4">
+    <small class="text-muted">
+        <i class="bi bi-shield-lock"></i> Manager accounts have full administrative privileges
+        <br>
+        Only authorized personnel should create manager accounts
+    </small>
+</div>
+{% endblock %}

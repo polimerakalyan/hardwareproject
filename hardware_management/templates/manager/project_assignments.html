@@ -1,0 +1,262 @@
+{% extends 'base.html' %}
+{% block title %}Project Assignments - {{ project.project_name }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h2 class="mb-2"><i class="bi bi-folder-fill text-primary"></i> {{ project.project_name }}</h2>
+                <p class="text-muted mb-0">
+                    <i class="bi bi-hash"></i> {{ project.project_id }} | 
+                    <i class="bi bi-building"></i> {{ project.location }} |
+                    <i class="bi bi-calendar"></i> {{ project.start_date|date:"d M Y" }} - {{ project.end_date|date:"d M Y" }}
+                </p>
+            </div>
+            <div>
+                <a href="{% url 'create_project' %}" class="btn btn-outline-secondary me-2">
+                    <i class="bi bi-arrow-left"></i> Back to Projects
+                </a>
+                <a href="{% url 'project_assignments' project.id %}?export=excel" class="btn btn-outline-success me-2">
+                    <i class="bi bi-file-spreadsheet"></i> Export to Excel
+                </a>
+                <a href="{% url 'create_assignment' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> New Assignment
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Project Statistics -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3 col-sm-6">
+        <div class="card border-0 shadow-sm bg-white h-100">
+            <div class="card-body text-center">
+                <h3 class="text-primary mb-2">{{ total_hardware }}</h3>
+                <p class="text-muted mb-0 fw-semibold">Total Hardware</p>
+                <small class="text-secondary">All assigned items</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="card border-0 shadow-sm bg-white h-100">
+            <div class="card-body text-center">
+                <h3 class="text-success mb-2">{{ active_hardware }}</h3>
+                <p class="text-muted mb-0 fw-semibold">In Use</p>
+                <small class="text-secondary">Currently active</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="card border-0 shadow-sm bg-white h-100">
+            <div class="card-body text-center">
+                <h3 class="text-warning mb-2">{{ assigned_hardware }}</h3>
+                <p class="text-muted mb-0 fw-semibold">Assigned</p>
+                <small class="text-secondary">Pending pickup</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="card border-0 shadow-sm bg-white h-100">
+            <div class="card-body text-center">
+                <h3 class="text-info mb-2">{{ employee_count }}</h3>
+                <p class="text-muted mb-0 fw-semibold">Employees</p>
+                <small class="text-secondary">Working on project</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Employees Table - One row per employee -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-secondary text-white">
+        <h5 class="mb-0">
+            <i class="bi bi-people"></i> Employees Working on This Project
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th style="min-width: 280px;">Employee</th>
+                        <th style="min-width: 160px;">Exam City</th>
+                        <th style="min-width: 140px;">Status</th>
+                        <th style="min-width: 140px;">Verification</th>
+                        <th style="min-width: 80px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for employee in employees %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="rounded-circle flex-shrink-0" style="width: 45px; height: 45px; background: linear-gradient(135deg, #E04D00, #FF6B1A); display: flex; align-items: center; justify-content: center;">
+                                    <span class="text-white fw-bold">{{ employee.name|first|upper }}</span>
+                                </div>
+                                <div class="overflow-hidden">
+                                    <strong class="d-block">{{ employee.name }}</strong>
+                                    <small class="text-muted text-truncate d-block">{{ employee.email }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-info-subtle text-info border-0 px-3 py-2">
+                                <i class="bi bi-geo-alt me-1"></i> {{ employee.exam_city }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if employee.status == 'active' %}
+                                <span class="badge bg-success px-3 py-2">
+                                    <i class="bi bi-check-circle-fill me-1"></i> Active
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary px-3 py-2">
+                                    <i class="bi bi-clock me-1"></i> Inactive
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if employee.verified %}
+                                <span class="badge bg-success px-3 py-2">
+                                    <i class="bi bi-check-circle-fill me-1"></i> Verified
+                                </span>
+                            {% elif employee.verification_status == 'pending' %}
+                                <span class="badge bg-warning text-dark px-3 py-2">
+                                    <i class="bi bi-hourglass-split me-1"></i> Pending
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary px-3 py-2">
+                                    <i class="bi bi-question-circle-fill me-1"></i> Not Entered
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'assignment_details' employee.assignment_id %}" class="btn btn-sm btn-outline-info" title="View Assignment">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5">
+                            <i class="bi bi-inbox display-1 text-muted"></i>
+                            <p class="mt-3 mb-0 fw-medium">No employees assigned to this project</p>
+                            <small class="text-muted">Click the button below to create assignments</small>
+                            <div class="mt-3">
+                                <a href="{% url 'create_assignment' %}?project={{ project.id }}" class="btn btn-primary">
+                                    <i class="bi bi-plus-circle"></i> Create First Assignment
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-opacity-10 {
+        --bs-bg-opacity: 0.1;
+    }
+    
+    .card {
+        border-radius: 16px;
+        overflow: hidden;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
+    }
+    
+    .table td, .table th {
+        vertical-align: middle;
+        padding: 1rem 0.75rem;
+    }
+    
+    .table tbody tr {
+        transition: background-color 0.2s ease;
+    }
+    
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .badge {
+        font-weight: 500;
+        border-radius: 20px;
+        font-size: 0.75rem;
+    }
+    
+    /* Modern badge variants */
+    .bg-info-subtle {
+        background-color: #e3f2fd !important;
+        color: #0d6efd !important;
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .table-responsive {
+            font-size: 0.8rem;
+        }
+        
+        .table td, .table th {
+            padding: 0.75rem 0.5rem;
+        }
+        
+        .badge {
+            font-size: 0.7rem;
+            padding: 0.25rem 0.6rem;
+        }
+        
+        .btn-sm {
+            padding: 0.2rem 0.5rem;
+        }
+        
+        .rounded-circle {
+            width: 35px !important;
+            height: 35px !important;
+        }
+    }
+    
+    /* Print styles */
+    @media print {
+        .btn, .actions, .bg-opacity-10 {
+            display: none !important;
+        }
+        
+        .card {
+            box-shadow: none !important;
+            border: 1px solid #ddd;
+        }
+        
+        .table {
+            width: 100%;
+        }
+    }
+    
+    /* Custom scrollbar for table */
+    .table-responsive::-webkit-scrollbar {
+        height: 8px;
+    }
+    
+    .table-responsive::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+    
+    .table-responsive::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 4px;
+    }
+    
+    .table-responsive::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+    }
+</style>
+{% endblock %}

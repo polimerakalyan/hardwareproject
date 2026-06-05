@@ -1,0 +1,440 @@
+{% extends 'base.html' %}
+{% block title %}Transfer Tracking - {{ transfer.transfer_id }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2><i class="bi bi-geo-alt"></i> Transfer Tracking</h2>
+                <p class="text-muted">Transfer ID: {{ transfer.transfer_id }}</p>
+                <p class="text-muted">Total Items: <strong>{{ transfer.transfer_items.count }}</strong></p>
+            </div>
+            <div>
+                <a href="{% url 'my_transfers' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to My Transfers
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <!-- Transfer Progress -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-diagram-3"></i> Transfer Progress</h5>
+            </div>
+            <div class="card-body">
+                <div class="progress-tracker">
+                    <div class="step {% if transfer.status != 'requested' %}completed{% endif %}">
+                        <div class="step-icon">1</div>
+                        <div class="step-label">Requested</div>
+                    </div>
+                    <div class="step {% if transfer.status in 'approved_by_manager,in_transit,received_by_receiver,completed' %}completed{% endif %}">
+                        <div class="step-icon">2</div>
+                        <div class="step-label">Approved</div>
+                    </div>
+                    <div class="step {% if transfer.status in 'in_transit,received_by_receiver,completed' %}completed{% endif %}">
+                        <div class="step-icon">3</div>
+                        <div class="step-label">In Transit</div>
+                    </div>
+                    <div class="step {% if transfer.status in 'received_by_receiver,completed' %}completed{% endif %}">
+                        <div class="step-icon">4</div>
+                        <div class="step-label">Received</div>
+                    </div>
+                    <!-- <div class="step {% if transfer.status == 'completed' %}completed{% endif %}">
+                        <div class="step-icon">5</div>
+                        <div class="step-label">Completed</div>
+                    </div> -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Hardware Items Table -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-laptop"></i> Hardware Items in Transfer</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Hardware Type</th>
+                                <th>Serial Number</th>
+                                <th>Model</th>
+                                <th>Brand</th>
+                                <th>Transfer Status</th>
+                                <th>Initiated Date</th>
+                                <th>Received Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in transfer.transfer_items.all %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td><strong>{{ item.hardware.hardware_type.name }}</strong></td>
+                                <td><code>{{ item.hardware.serial_number }}</code></td>
+                                <td>{{ item.hardware.model_name }}</td>
+                                <td>{{ item.hardware.brand|default:"-" }}</td>
+                                <td>
+                                    {% if item.status == 'pending' %}
+                                        <span class="badge bg-warning">Pending</span>
+                                    {% elif item.status == 'in_transit' %}
+                                        <span class="badge bg-primary">In Transit</span>
+                                    {% elif item.status == 'received' %}
+                                        <span class="badge bg-success">Received</span>
+                                    {% elif item.status == 'returned' %}
+                                        <span class="badge bg-info">Returned</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ item.transfer_date|date:"d/m/Y"|default:"-" }}</td>
+                                <td>{{ item.received_date|date:"d/m/Y"|default:"-" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center py-4">
+                                    <i class="bi bi-inbox display-4 text-muted"></i>
+                                    <p class="mt-2">No hardware items in this transfer</p>
+                                </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Transfer Information Table -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Transfer Information</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered mb-0">
+                        <tbody>
+                            <tr>
+                                <th width="25%" class="bg-light">Transfer ID</th>
+                                <td><strong>{{ transfer.transfer_id }}</strong></td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Transfer Type</th>
+                                <td>
+                                    {% if transfer.transfer_type == 'temporary' %}
+                                        <span class="badge bg-warning">Temporary Transfer</span>
+                                    {% else %}
+                                        <span class="badge bg-success">Permanent Transfer</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Status</th>
+                                <td>
+                                    {% if transfer.status == 'requested' %}
+                                        <span class="badge bg-warning">Pending Approval</span>
+                                    {% elif transfer.status == 'approved_by_manager' %}
+                                        <span class="badge bg-info">Approved</span>
+                                    {% elif transfer.status == 'in_transit' %}
+                                        <span class="badge bg-primary">In Transit</span>
+                                    {% elif transfer.status == 'received_by_receiver' %}
+                                        <span class="badge bg-secondary">Received</span>
+                                    {% elif transfer.status == 'completed' %}
+                                        <span class="badge bg-success">Completed</span>
+                                    {% elif transfer.status == 'rejected' %}
+                                        <span class="badge bg-danger">Rejected</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">From Employee</th>
+                                <td>
+                                    <strong>{{ transfer.from_employee.get_full_name|default:transfer.from_employee.username }}</strong><br>
+                                    <small class="text-muted"><i class="bi bi-geo-alt"></i> {{ transfer.from_exam_city }}</small>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">To Employee</th>
+                                <td>
+                                    <strong>{{ transfer.to_employee.get_full_name|default:transfer.to_employee.username }}</strong><br>
+                                    <small class="text-muted"><i class="bi bi-geo-alt"></i> {{ transfer.to_exam_city }}</small>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Reason for Transfer</th>
+                                <td>{{ transfer.reason }}</td>
+                            </tr>
+                            {% if transfer.expected_return_date %}
+                            <tr>
+                                <th class="bg-light">Expected Return Date</th>
+                                <td>{{ transfer.expected_return_date|date:"d M Y" }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if transfer.expected_arrival_date %}
+                            <tr>
+                                <th class="bg-light">Expected Arrival Date</th>
+                                <td>{{ transfer.expected_arrival_date|date:"d M Y" }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if transfer.delivery_method %}
+                            <tr>
+                                <th class="bg-light">Delivery Method</th>
+                                <td>{{ transfer.delivery_method }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if transfer.tracking_number %}
+                            <tr>
+                                <th class="bg-light">Tracking Number</th>
+                                <td><code>{{ transfer.tracking_number }}</code></td>
+                            </tr>
+                            {% endif %}
+                            <tr>
+                                <th class="bg-light">Requested Date</th>
+                                <td>{{ transfer.requested_date|date:"d M Y H:i" }}</td>
+                            </tr>
+                            {% if transfer.approved_date %}
+                            <tr>
+                                <th class="bg-light">Approved Date</th>
+                                <td>{{ transfer.approved_date|date:"d M Y H:i" }}<br>
+                                <small>by {{ transfer.approved_by.get_full_name|default:transfer.approved_by.username }}</small>
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% if transfer.transfer_date %}
+                            <tr>
+                                <th class="bg-light">Transfer Initiated</th>
+                                <td>{{ transfer.transfer_date|date:"d M Y" }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if transfer.actual_arrival_date %}
+                            <tr>
+                                <th class="bg-light">Actual Arrival Date</th>
+                                <td>{{ transfer.actual_arrival_date|date:"d M Y" }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if transfer.return_date %}
+                            <tr>
+                                <th class="bg-light">Return Date</th>
+                                <td>{{ transfer.return_date|date:"d M Y" }}</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        {% if transfer.requester_notes or transfer.manager_notes %}
+        <!-- Notes Section -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-chat-text"></i> Notes</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered mb-0">
+                        <tbody>
+                            {% if transfer.requester_notes %}
+                            <tr>
+                                <th width="25%" class="bg-light">Requester Notes</th>
+                                <td>{{ transfer.requester_notes }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if transfer.manager_notes %}
+                            <tr>
+                                <th class="bg-light">Manager Notes</th>
+                                <td>{{ transfer.manager_notes }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if transfer.completion_notes %}
+                            <tr>
+                                <th class="bg-light">Completion Notes</th>
+                                <td>{{ transfer.completion_notes }}</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if transfer.condition_before or transfer.condition_after %}
+        <!-- Condition Section -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-clipboard-check"></i> Hardware Condition</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered mb-0">
+                        <tbody>
+                            {% if transfer.condition_before %}
+                            <tr>
+                                <th width="25%" class="bg-light">Before Transfer</th>
+                                <td>{{ transfer.condition_before }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if transfer.condition_after %}
+                            <tr>
+                                <th class="bg-light">After Receipt</th>
+                                <td>{{ transfer.condition_after }}</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Transfer Statistics -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-pie-chart"></i> Transfer Statistics</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-3">
+                        <div class="border rounded p-3">
+                            <h3 class="text-primary mb-0">{{ transfer.transfer_items.count }}</h3>
+                            <small class="text-muted">Total Items</small>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="border rounded p-3">
+                            <h3 class="text-warning mb-0">{{ transfer.transfer_items.filter.status_pending.count }}</h3>
+                            <small class="text-muted">Pending</small>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="border rounded p-3">
+                            <h3 class="text-primary mb-0">{{ transfer.transfer_items.filter.status_in_transit.count }}</h3>
+                            <small class="text-muted">In Transit</small>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="border rounded p-3">
+                            <h3 class="text-success mb-0">{{ transfer.transfer_items.filter.status_received.count }}</h3>
+                            <small class="text-muted">Received</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <div class="d-flex justify-content-between mb-1">
+                        <small>Transfer Progress</small>
+                        <small>{% widthratio transfer.transfer_items.filter.status_received.count transfer.transfer_items.count 100 %}%</small>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-success" style="width: {% widthratio transfer.transfer_items.filter.status_received.count transfer.transfer_items.count 100 %}%"></div>
+                        <div class="progress-bar bg-primary" style="width: {% widthratio transfer.transfer_items.filter.status_in_transit.count transfer.transfer_items.count 100 %}%"></div>
+                        <div class="progress-bar bg-warning" style="width: {% widthratio transfer.transfer_items.filter.status_pending.count transfer.transfer_items.count 100 %}%"></div>
+                    </div>
+                    <small class="text-muted d-block text-center mt-2">
+                        {{ transfer.transfer_items.filter.status_received.count }} of {{ transfer.transfer_items.count }} items received
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        {% if can_act %}
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="bi bi-lightning-charge"></i> Actions Required</h5>
+            </div>
+            <div class="card-body">
+                {% if transfer.status == 'approved_by_manager' and request.user == transfer.from_employee %}
+                <form method="POST" action="{% url 'update_transfer_status_employee' transfer.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="initiate">
+                    <div class="mb-3">
+                        <label class="form-label">Hardware Condition</label>
+                        <textarea name="notes" class="form-control" rows="2" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-send"></i> Initiate Transfer ({{ transfer.transfer_items.count }} items)
+                    </button>
+                </form>
+                {% elif transfer.status == 'in_transit' and request.user == transfer.to_employee %}
+                <form method="POST" action="{% url 'update_transfer_status_employee' transfer.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="receive">
+                    <div class="mb-3">
+                        <label class="form-label">Hardware Condition Received</label>
+                        <textarea name="notes" class="form-control" rows="2" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-check-circle"></i> Confirm Receipt ({{ transfer.transfer_items.count }} items)
+                    </button>
+                </form>
+                {% elif transfer.status == 'received_by_receiver' and transfer.transfer_type == 'temporary' and request.user == transfer.to_employee %}
+                <form method="POST" action="{% url 'update_transfer_status_employee' transfer.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="return">
+                    <button type="submit" class="btn btn-warning w-100">
+                        <i class="bi bi-arrow-return-left"></i> Return Hardware
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+  .progress-tracker {
+        display: flex;
+        justify-content: space-between;
+        margin: 20px 0;
+    }
+    .step {
+        text-align: center;
+        flex: 1;
+        position: relative;
+    }
+    .step:not(:last-child):before {
+        content: '';
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        width: 100%;
+        height: 2px;
+        background: #dee2e6;
+        z-index: 0;
+    }
+    .step.completed:not(:last-child):before {
+        background: #28a745;
+    }
+    .step-icon {
+        width: 40px;
+        height: 40px;
+        background: #dee2e6;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 10px;
+        position: relative;
+        z-index: 1;
+        font-weight: bold;
+    }
+    .step.completed .step-icon {
+        background: #28a745;
+        color: white;
+    }
+    .step-label {
+        font-size: 12px;
+        color: #6c757d;
+    }
+    .step.completed .step-label {
+        color: #28a745;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}

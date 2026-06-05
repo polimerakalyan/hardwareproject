@@ -1,0 +1,886 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Hardware AI Assistant - Eduquity Hardware Management{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <div>
+                <h2 class="fw-bold"><i class="bi bi-robot text-primary me-2"></i> Hardware AI Assistant</h2>
+                <p class="text-muted">AI-Powered - Click any button to get instant answers about your hardware management</p>
+            </div>
+            <div class="mt-2 mt-sm-0">
+                <a href="{% url 'manager_dashboard' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <div class="card border-0 shadow-lg">
+            <div class="card-header bg-gradient-primary text-white">
+                <div class="d-flex align-items-center">
+                    <div class="bot-avatar me-3">
+                        <i class="bi bi-robot fs-3"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0 fw-semibold">Hardware AI Assistant</h5>
+                        <small>Powered by Eduquity • Ask me anything about your hardware</small>
+                    </div>
+                    <div class="ms-auto">
+                        <button class="btn btn-sm btn-light text-primary" id="clearChatBtn" title="Clear Chat">
+                            <i class="bi bi-trash"></i> Clear Chat
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ========== CHAT AREA - ALL RESPONSES APPEAR HERE ========== -->
+            <div class="card-body response-area p-3" id="responseArea" style="min-height: 400px; max-height: 450px; overflow-y: auto; background: linear-gradient(145deg, #f8f9fa 0%, #ffffff 100%);">
+                <div class="bot-message mb-3">
+                    <div class="message-content">
+                        <div class="message-avatar">
+                            <i class="bi bi-robot"></i>
+                        </div>
+                        <div class="message-text">
+                            <p class="mb-0">👋 Hello <strong>{{ user.get_full_name|default:user.username }}</strong>! I'm your AI Hardware Management Assistant.</p>
+                            <p class="mb-0 mt-2">Click on any button below to get instant information about your hardware, employees, assignments, and more!</p>
+                            <hr class="my-2">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <small class="text-muted">📊 <strong>Quick Stats:</strong></small>
+                                    <ul class="mb-0 small">
+                                        <li>Total Hardware: <span id="statTotalHardwareDisplay">{{ total_hardware|default:"0" }}</span></li>
+                                        <li>Active Assignments: <span id="statActiveAssignmentsDisplay">{{ active_assignments|default:"0" }}</span></li>
+                                        <li>Verified Items: <span id="statVerifiedItemsDisplay">{{ verified_items|default:"0" }}</span></li>
+                                        <li>Overdue Items: <span id="statOverdueItemsDisplay">{{ overdue_items|default:"0" }}</span></li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <small class="text-muted">💡 <strong>Try clicking:</strong></small>
+                                    <ul class="mb-0 small">
+                                        <li>📊 Total Hardware</li>
+                                        <li>📋 Active Assignments</li>
+                                        <li>👥 All Employees</li>
+                                        <li>🔐 Verification Status</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Previous conversation history -->
+                {% for conv in conversations %}
+                <div class="user-message mb-3">
+                    <div class="message-content">
+                        <div class="message-text">
+                            <p class="mb-0">{{ conv.message }}</p>
+                        </div>
+                        <div class="message-avatar">
+                            <i class="bi bi-person-circle"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bot-message mb-3">
+                    <div class="message-content">
+                        <div class="message-avatar">
+                            <i class="bi bi-robot"></i>
+                        </div>
+                        <div class="message-text">
+                            <p class="mb-0">{{ conv.response|linebreaksbr }}</p>
+                            <small class="text-muted mt-1 d-block">{{ conv.created_at|date:"H:i" }}</small>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Typing Indicator -->
+            <div id="typingIndicator" class="typing-indicator" style="display: none; padding: 12px 20px; border-bottom: 1px solid #e9ecef;">
+                <div class="message-content">
+                    <div class="message-avatar">
+                        <i class="bi bi-robot"></i>
+                    </div>
+                    <div class="message-text">
+                        <div class="typing-dots">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                        <span class="ms-2 text-muted small">AI is thinking...</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ========== BUTTONS SECTION - ALL BUTTONS BELOW CHAT ========== -->
+            <div class="card-footer bg-white p-3">
+                <!-- Statistics Row -->
+                <div class="row g-2 mb-3 pb-2 border-bottom">
+                    <div class="col-md-3 col-6">
+                        <div class="stat-mini text-center">
+                            <i class="bi bi-laptop text-primary"></i>
+                            <small class="text-muted d-block">Total Hardware</small>
+                            <h5 class="mb-0 fw-bold" id="statTotalHardware">{{ total_hardware|default:"0" }}</h5>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="stat-mini text-center">
+                            <i class="bi bi-clipboard-check text-warning"></i>
+                            <small class="text-muted d-block">Active Assignments</small>
+                            <h5 class="mb-0 fw-bold" id="statActiveAssignments">{{ active_assignments|default:"0" }}</h5>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="stat-mini text-center">
+                            <i class="bi bi-shield-check text-success"></i>
+                            <small class="text-muted d-block">Verified Items</small>
+                            <h5 class="mb-0 fw-bold" id="statVerifiedItems">{{ verified_items|default:"0" }}</h5>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="stat-mini text-center">
+                            <i class="bi bi-exclamation-triangle text-danger"></i>
+                            <small class="text-muted d-block">Overdue Items</small>
+                            <h5 class="mb-0 fw-bold" id="statOverdueItems">{{ overdue_items|default:"0" }}</h5>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Main Menu Options -->
+                <div class="main-menu mb-3">
+                    <div class="main-menu-header mb-2">
+                        <small class="text-muted text-uppercase fw-bold">
+                            <i class="bi bi-grid-3x3-gap-fill me-1"></i> Quick Menu
+                        </small>
+                    </div>
+                    <div class="main-menu-buttons">
+                        <button class="main-menu-btn" data-group="hardware">
+                            <i class="bi bi-laptop"></i> Hardware Management
+                            <span class="menu-badge">6</span>
+                        </button>
+                        <button class="main-menu-btn" data-group="employee">
+                            <i class="bi bi-people"></i> Employee Management
+                            <span class="menu-badge">5</span>
+                        </button>
+                        <button class="main-menu-btn" data-group="assignment">
+                            <i class="bi bi-clipboard-check"></i> Assignment Tracking
+                            <span class="menu-badge">5</span>
+                        </button>
+                        <button class="main-menu-btn" data-group="verification">
+                            <i class="bi bi-shield-check"></i> Verification Status
+                            <span class="menu-badge">4</span>
+                        </button>
+                        <button class="main-menu-btn" data-group="transfer">
+                            <i class="bi bi-arrow-left-right"></i> Transfer Management
+                            <span class="menu-badge">5</span>
+                        </button>
+                        <button class="main-menu-btn" data-group="search">
+                            <i class="bi bi-search"></i> Search & Help
+                            <span class="menu-badge">4</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- All Groups Container -->
+                <div id="groupsContainer">
+                    <!-- Hardware Management Group -->
+                    <div class="command-group mb-2" id="group-hardware">
+                        <div class="command-group-header">
+                            <i class="bi bi-chevron-right toggle-icon"></i>
+                            <i class="bi bi-laptop text-primary"></i>
+                            <span>Hardware Management Options</span>
+                            <span class="badge bg-primary rounded-pill ms-2">6 options</span>
+                        </div>
+                        <div class="command-buttons" style="display: none;">
+                            <button class="cmd-btn cmd-primary" data-question="Total hardware">
+                                <i class="bi bi-bar-chart"></i> Total Hardware
+                            </button>
+                            <button class="cmd-btn cmd-primary" data-question="Hardware by type">
+                                <i class="bi bi-pie-chart"></i> Hardware by Type
+                            </button>
+                            <button class="cmd-btn cmd-primary" data-question="Available hardware">
+                                <i class="bi bi-check-circle"></i> Available Hardware
+                            </button>
+                            <button class="cmd-btn cmd-primary" data-question="Laptop status">
+                                <i class="bi bi-laptop"></i> Laptop Status
+                            </button>
+                            <button class="cmd-btn cmd-primary" data-question="Firewall status">
+                                <i class="bi bi-shield"></i> Firewall Status
+                            </button>
+                            <button class="cmd-btn cmd-primary" data-question="All hardware inventory">
+                                <i class="bi bi-database"></i> All Hardware Inventory
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Employee Management Group -->
+                    <div class="command-group mb-2" id="group-employee">
+                        <div class="command-group-header">
+                            <i class="bi bi-chevron-right toggle-icon"></i>
+                            <i class="bi bi-people text-success"></i>
+                            <span>Employee Management Options</span>
+                            <span class="badge bg-success rounded-pill ms-2">5 options</span>
+                        </div>
+                        <div class="command-buttons" style="display: none;">
+                            <button class="cmd-btn cmd-success" data-question="All employees">
+                                <i class="bi bi-people"></i> All Employees
+                            </button>
+                            <button class="cmd-btn cmd-success" data-question="Active employees">
+                                <i class="bi bi-person-check"></i> Active Employees
+                            </button>
+                            <div class="dropdown d-inline-block">
+                                <button class="cmd-btn cmd-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <i class="bi bi-person-badge"></i> Employee Details
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item employee-detail-btn" href="#" data-name="John">John</a></li>
+                                    <li><a class="dropdown-item employee-detail-btn" href="#" data-name="EDU">EDU User</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item employee-detail-btn" href="#" data-name="">Custom Name...</a></li>
+                                </ul>
+                            </div>
+                            <div class="dropdown d-inline-block">
+                                <button class="cmd-btn cmd-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <i class="bi bi-laptop"></i> Employee Hardware
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item employee-hardware-btn" href="#" data-name="John">John's Hardware</a></li>
+                                    <li><a class="dropdown-item employee-hardware-btn" href="#" data-name="EDU">EDU User's Hardware</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item employee-hardware-btn" href="#" data-name="">Custom Name...</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Assignment Tracking Group -->
+                    <div class="command-group mb-2" id="group-assignment">
+                        <div class="command-group-header">
+                            <i class="bi bi-chevron-right toggle-icon"></i>
+                            <i class="bi bi-clipboard-check text-warning"></i>
+                            <span>Assignment Tracking Options</span>
+                            <span class="badge bg-warning rounded-pill ms-2">5 options</span>
+                        </div>
+                        <div class="command-buttons" style="display: none;">
+                            <button class="cmd-btn cmd-warning" data-question="Active assignments">
+                                <i class="bi bi-list-check"></i> Active Assignments
+                            </button>
+                            <button class="cmd-btn cmd-warning" data-question="Overdue assignments">
+                                <i class="bi bi-exclamation-triangle"></i> Overdue Assignments
+                            </button>
+                            <button class="cmd-btn cmd-warning" data-question="Due soon assignments">
+                                <i class="bi bi-clock"></i> Due Soon
+                            </button>
+                            <button class="cmd-btn cmd-warning" data-question="All assignments">
+                                <i class="bi bi-table"></i> All Assignments
+                            </button>
+                            <button class="cmd-btn cmd-warning" data-question="Assignment by employee">
+                                <i class="bi bi-person"></i> Assignment by Employee
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Verification Status Group -->
+                    <div class="command-group mb-2" id="group-verification">
+                        <div class="command-group-header">
+                            <i class="bi bi-chevron-right toggle-icon"></i>
+                            <i class="bi bi-shield-check text-info"></i>
+                            <span>Verification Status Options</span>
+                            <span class="badge bg-info rounded-pill ms-2">4 options</span>
+                        </div>
+                        <div class="command-buttons" style="display: none;">
+                            <button class="cmd-btn cmd-info" data-question="Verification status overview">
+                                <i class="bi bi-shield-check"></i> Verification Status Overview
+                            </button>
+                            <button class="cmd-btn cmd-info" data-question="Pending verification items">
+                                <i class="bi bi-clock"></i> Pending Verification
+                            </button>
+                            <button class="cmd-btn cmd-info" data-question="Verified items list">
+                                <i class="bi bi-check-circle"></i> Verified Items
+                            </button>
+                            <button class="cmd-btn cmd-info" data-question="Failed verification items">
+                                <i class="bi bi-x-circle"></i> Failed Verification
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Transfer Management Group -->
+                    <div class="command-group mb-2" id="group-transfer">
+                        <div class="command-group-header">
+                            <i class="bi bi-chevron-right toggle-icon"></i>
+                            <i class="bi bi-arrow-left-right text-secondary"></i>
+                            <span>Transfer Management Options</span>
+                            <span class="badge bg-secondary rounded-pill ms-2">5 options</span>
+                        </div>
+                        <div class="command-buttons" style="display: none;">
+                            <button class="cmd-btn cmd-secondary" data-question="Transfer status overview">
+                                <i class="bi bi-arrow-left-right"></i> Transfer Status
+                            </button>
+                            <button class="cmd-btn cmd-secondary" data-question="In transit transfers">
+                                <i class="bi bi-truck"></i> In Transit Transfers
+                            </button>
+                            <button class="cmd-btn cmd-secondary" data-question="Pending transfers">
+                                <i class="bi bi-clock"></i> Pending Transfers
+                            </button>
+                            <button class="cmd-btn cmd-secondary" data-question="Completed transfers">
+                                <i class="bi bi-check-circle"></i> Completed Transfers
+                            </button>
+                            <button class="cmd-btn cmd-secondary" data-question="Recent transfer history">
+                                <i class="bi bi-history"></i> Recent Transfer History
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Search & Help Group -->
+                    <div class="command-group mb-2" id="group-search">
+                        <div class="command-group-header">
+                            <i class="bi bi-chevron-right toggle-icon"></i>
+                            <i class="bi bi-search text-dark"></i>
+                            <span>Search & Help Options</span>
+                            <span class="badge bg-dark rounded-pill ms-2">4 options</span>
+                        </div>
+                        <div class="command-buttons" style="display: none;">
+                            <button class="cmd-btn cmd-dark" data-question="Help">
+                                <i class="bi bi-question-circle"></i> Help & Commands
+                            </button>
+                            <div class="dropdown d-inline-block">
+                                <button class="cmd-btn cmd-dark dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <i class="bi bi-search"></i> Search Hardware
+                                </button>
+                                <ul class="dropdown-menu p-2" style="min-width: 280px;">
+                                    <li>
+                                        <div class="input-group input-group-sm">
+                                            <input type="text" class="form-control" id="searchSerialInput" placeholder="Enter serial number or keyword...">
+                                            <button class="btn btn-primary btn-sm" id="searchSerialBtn">Search</button>
+                                        </div>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item search-example" href="#" data-query="Search laptop">🔍 Search for "laptop"</a></li>
+                                    <li><a class="dropdown-item search-example" href="#" data-query="Search LAP-1234">🔍 Search for "LAP-1234"</a></li>
+                                </ul>
+                            </div>
+                            <button class="cmd-btn cmd-dark" data-question="Show all commands">
+                                <i class="bi bi-grid-3x3-gap"></i> Show All Commands
+                            </button>
+                            <button class="cmd-btn cmd-dark" data-question="About AI Assistant">
+                                <i class="bi bi-info-circle"></i> About
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Message Input Area -->
+                <div class="message-input-area mt-3 pt-2 border-top">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="messageInput" placeholder="Type your question here...">
+                        <button class="btn btn-primary" id="sendMessageBtn">
+                            <i class="bi bi-send"></i> Send
+                        </button>
+                    </div>
+                    <small class="text-muted mt-2 d-block">
+                        <i class="bi bi-info-circle"></i> Ask anything about hardware, employees, assignments, or transfers
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+    }
+    
+    .response-area {
+        scroll-behavior: smooth;
+    }
+    
+    .message-content {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+    }
+    
+    .user-message .message-content {
+        justify-content: flex-end;
+    }
+    
+    .user-message .message-text {
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+        color: white;
+        border-radius: 18px 18px 4px 18px;
+        padding: 12px 18px;
+        max-width: 75%;
+        box-shadow: 0 2px 8px rgba(13,110,253,0.2);
+    }
+    
+    .bot-message .message-text {
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 18px 18px 18px 4px;
+        padding: 12px 18px;
+        max-width: 85%;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    .message-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    
+    .bot-message .message-avatar {
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+        color: white;
+        box-shadow: 0 2px 8px rgba(13,110,253,0.3);
+    }
+    
+    .user-message .message-avatar {
+        background: #e9ecef;
+        color: #6c757d;
+    }
+    
+    .typing-dots {
+        display: inline-flex;
+        gap: 4px;
+        padding: 8px 0;
+    }
+    
+    .typing-dots span {
+        width: 10px;
+        height: 10px;
+        background: #0d6efd;
+        border-radius: 50%;
+        animation: typing 1.4s infinite ease-in-out;
+    }
+    
+    @keyframes typing {
+        0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+        30% { transform: translateY(-10px); opacity: 1; }
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .main-menu {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 16px;
+        padding: 12px;
+        margin-bottom: 16px;
+    }
+    
+    .main-menu-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    
+    .main-menu-btn {
+        flex: 1;
+        min-width: 150px;
+        padding: 12px 16px;
+        background: white;
+        border: 2px solid #dee2e6;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 13px;
+        color: #2c3e50;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    
+    .main-menu-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+        border-color: #0d6efd;
+        color: #0d6efd;
+    }
+    
+    .menu-badge {
+        background: #0d6efd;
+        color: white;
+        border-radius: 20px;
+        padding: 2px 8px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+    
+    .command-group {
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        overflow: hidden;
+        background: white;
+        margin-bottom: 12px;
+    }
+    
+    .command-group-header {
+        font-size: 13px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #2c3e50;
+        padding: 12px 16px;
+        background: #f8f9fa;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        user-select: none;
+    }
+    
+    .command-group-header:hover {
+        background: #e9ecef;
+    }
+    
+    .command-group-header i:first-child {
+        font-size: 14px;
+        transition: transform 0.2s ease;
+    }
+    
+    .command-group-header.active i:first-child {
+        transform: rotate(90deg);
+    }
+    
+    .command-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 12px 16px;
+        background: white;
+        border-top: 1px solid #e9ecef;
+    }
+    
+    .cmd-btn {
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+        border: none;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    
+    .cmd-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .cmd-primary { background: #e7f1ff; color: #0d6efd; }
+    .cmd-primary:hover { background: #0d6efd; color: white; }
+    .cmd-success { background: #d1e7dd; color: #198754; }
+    .cmd-success:hover { background: #198754; color: white; }
+    .cmd-warning { background: #fff3cd; color: #856404; }
+    .cmd-warning:hover { background: #ffc107; color: #2c3e50; }
+    .cmd-info { background: #cff4fc; color: #055160; }
+    .cmd-info:hover { background: #0dcaf0; color: white; }
+    .cmd-secondary { background: #e9ecef; color: #6c757d; }
+    .cmd-secondary:hover { background: #6c757d; color: white; }
+    .cmd-dark { background: #e9ecef; color: #212529; }
+    .cmd-dark:hover { background: #212529; color: white; }
+    
+    .stat-mini {
+        background: white;
+        padding: 10px;
+        border-radius: 12px;
+        border: 1px solid #e9ecef;
+        transition: all 0.2s ease;
+    }
+    
+    .stat-mini:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    
+    .dropdown-menu {
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        border: none;
+    }
+    
+    .dropdown-item:hover {
+        background: #0d6efd;
+        color: white;
+    }
+    
+    .message-input-area {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 12px;
+    }
+    
+    @media (max-width: 768px) {
+        .main-menu-btn {
+            min-width: 100%;
+            font-size: 12px;
+            padding: 10px 12px;
+        }
+        
+        .user-message .message-text,
+        .bot-message .message-text {
+            max-width: 90%;
+            font-size: 13px;
+        }
+        
+        .message-avatar {
+            width: 28px;
+            height: 28px;
+        }
+        
+        .cmd-btn {
+            padding: 4px 10px;
+            font-size: 11px;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const responseArea = document.getElementById('responseArea');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendMessageBtn');
+        const clearChatBtn = document.getElementById('clearChatBtn');
+        
+        function scrollToBottom() {
+            responseArea.scrollTop = responseArea.scrollHeight;
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function addMessage(message, isUser) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `${isUser ? 'user-message' : 'bot-message'} mb-3`;
+            messageDiv.style.animation = 'fadeIn 0.3s ease';
+            
+            if (isUser) {
+                messageDiv.innerHTML = `
+                    <div class="message-content">
+                        <div class="message-text">
+                            <p class="mb-0">${escapeHtml(message)}</p>
+                        </div>
+                        <div class="message-avatar">
+                            <i class="bi bi-person-circle"></i>
+                        </div>
+                    </div>
+                `;
+            } else {
+                const formattedMessage = message
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\n/g, '<br>');
+                
+                messageDiv.innerHTML = `
+                    <div class="message-content">
+                        <div class="message-avatar">
+                            <i class="bi bi-robot"></i>
+                        </div>
+                        <div class="message-text">
+                            <p class="mb-0">${formattedMessage}</p>
+                            <small class="text-muted mt-2 d-block">
+                                <i class="bi bi-clock"></i> ${new Date().toLocaleTimeString()}
+                            </small>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            responseArea.appendChild(messageDiv);
+            scrollToBottom();
+        }
+        
+        async function sendMessage(message) {
+            if (!message.trim()) return;
+            
+            addMessage(message, true);
+            
+            typingIndicator.style.display = 'flex';
+            scrollToBottom();
+            
+            try {
+                const response = await fetch('/manager/chatbot-api/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+                
+                const data = await response.json();
+                
+                typingIndicator.style.display = 'none';
+                
+                if (data.message) {
+                    addMessage(data.message, false);
+                    updateStatsFromResponse(data.message);
+                } else if (data.error) {
+                    addMessage('Sorry, I encountered an error. Please try again.', false);
+                }
+                
+            } catch (error) {
+                typingIndicator.style.display = 'none';
+                addMessage('Sorry, I encountered an error. Please try again.', false);
+                console.error('Error:', error);
+            }
+        }
+        
+        function updateStatsFromResponse(response) {
+            const totalMatch = response.match(/Total Hardware:\s*\*\*(\d+)\*\*/);
+            const activeMatch = response.match(/Total Active:\s*\*\*(\d+)\*\*/);
+            const verifiedMatch = response.match(/Verified:\s*\*\*(\d+)\*\*/);
+            const overdueMatch = response.match(/Overdue:\s*\*\*(\d+)\*\*/);
+            
+            if (totalMatch) {
+                document.getElementById('statTotalHardware').textContent = totalMatch[1];
+                document.getElementById('statTotalHardwareDisplay').textContent = totalMatch[1];
+            }
+            if (activeMatch) {
+                document.getElementById('statActiveAssignments').textContent = activeMatch[1];
+                document.getElementById('statActiveAssignmentsDisplay').textContent = activeMatch[1];
+            }
+            if (verifiedMatch) {
+                document.getElementById('statVerifiedItems').textContent = verifiedMatch[1];
+                document.getElementById('statVerifiedItemsDisplay').textContent = verifiedMatch[1];
+            }
+            if (overdueMatch) {
+                document.getElementById('statOverdueItems').textContent = overdueMatch[1];
+                document.getElementById('statOverdueItemsDisplay').textContent = overdueMatch[1];
+            }
+        }
+        
+        // Accordion functionality
+        const groupHeaders = document.querySelectorAll('.command-group-header');
+        
+        groupHeaders.forEach(header => {
+            const buttonsDiv = header.nextElementSibling;
+            buttonsDiv.style.display = 'none';
+            
+            header.addEventListener('click', function() {
+                if (buttonsDiv.style.display === 'none') {
+                    buttonsDiv.style.display = 'flex';
+                    header.classList.add('active');
+                } else {
+                    buttonsDiv.style.display = 'none';
+                    header.classList.remove('active');
+                }
+            });
+        });
+        
+        // Command buttons - send to chat
+        document.querySelectorAll('.cmd-btn').forEach(btn => {
+            if (btn.getAttribute('data-question')) {
+                btn.addEventListener('click', function() {
+                    const question = this.getAttribute('data-question');
+                    sendMessage(question);
+                });
+            }
+        });
+        
+        // Employee detail buttons
+        document.querySelectorAll('.employee-detail-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                let name = this.getAttribute('data-name');
+                if (!name) {
+                    name = prompt('Enter employee name:');
+                }
+                if (name) {
+                    sendMessage(`Employee details ${name}`);
+                }
+            });
+        });
+        
+        // Employee hardware buttons
+        document.querySelectorAll('.employee-hardware-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                let name = this.getAttribute('data-name');
+                if (!name) {
+                    name = prompt('Enter employee name:');
+                }
+                if (name) {
+                    sendMessage(`Employee hardware ${name}`);
+                }
+            });
+        });
+        
+        // Search example buttons
+        document.querySelectorAll('.search-example').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const query = this.getAttribute('data-query');
+                sendMessage(query);
+            });
+        });
+        
+        // Search button
+        document.getElementById('searchSerialBtn')?.addEventListener('click', function() {
+            const serial = document.getElementById('searchSerialInput')?.value;
+            if (serial) {
+                sendMessage(`Find hardware ${serial}`);
+                document.getElementById('searchSerialInput').value = '';
+            }
+        });
+        
+        document.getElementById('searchSerialInput')?.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const serial = this.value;
+                if (serial) {
+                    sendMessage(`Find hardware ${serial}`);
+                    this.value = '';
+                }
+            }
+        });
+        
+        // Send message from input box
+        sendBtn?.addEventListener('click', function() {
+            const message = messageInput.value.trim();
+            if (message) {
+                sendMessage(message);
+                messageInput.value = '';
+            }
+        });
+        
+        messageInput?.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const message = this.value.trim();
+                if (message) {
+                    sendMessage(message);
+                    this.value = '';
+                }
+            }
+        });
+        
+        // Clear chat
+        clearChatBtn?.addEventListener('click', function() {
+            const messages = responseArea.querySelectorAll('.user-message, .bot-message');
+            messages.forEach(msg => msg.remove());
+            addMessage('Chat cleared! How can I help you today?', false);
+        });
+        
+        scrollToBottom();
+    });
+</script>
+{% endblock %}
