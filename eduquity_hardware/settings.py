@@ -21,7 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = "django-insecure-9nkip+vuqc%uggfw%y4706cf^8&!)i648s)wo(6o012!w%1xt^"
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '192.168.1.*']
+ALLOWED_HOSTS = ['*']
 
 
 
@@ -75,13 +75,12 @@ WSGI_APPLICATION = 'eduquity_hardware.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'eduquity_hardware_db',  
-        'USER': 'root',                   
-        'PASSWORD': '',                   
-        'HOST': 'localhost',              
-        'PORT': '3306',                  
+        'NAME': 'eduquity_hardware_db',
+        'USER': 'root',
+        'PASSWORD': 'rootpass',
+        'HOST': 'mysql-db',
+        'PORT': '3306',
         'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
             'charset': 'utf8mb4',
         }
     }
