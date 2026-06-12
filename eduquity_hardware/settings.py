@@ -21,9 +21,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = "django-insecure-9nkip+vuqc%uggfw%y4706cf^8&!)i648s)wo(6o012!w%1xt^"
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
-
-
+ALLOWED_HOSTS = [
+    "eduquityinventory.co.in",
+    "www.eduquityinventory.co.in",
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
