@@ -14,6 +14,8 @@ class CustomUser(AbstractUser):
     is_first_login = models.BooleanField(default=True)
     manager = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='managed_employees')
     phone = models.CharField(max_length=15, blank=True, null=True)
+    branch_location = models.CharField(max_length=200, blank=True, null=True)  
+
 
 
     def __str__(self):
@@ -58,6 +60,8 @@ class Hardware(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='available')
     created_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
+    asset_number = models.CharField(max_length=100, unique=True, null=True, blank=True, help_text="Unique asset tag number")
+
 
     
     def __str__(self):

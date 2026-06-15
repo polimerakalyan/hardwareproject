@@ -2,16 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
   <title>Login - Eduquity Hardware Management</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
   <style>
     :root {
-      --primary: block;
-      --primary-light: #81e6b7;
-      --primary-dark: #157347;
+      --primary: #E04D00;
+      --primary-light: #FF6B1A;
+      --primary-dark: #c44500;
       --light-bg: #f8f9fa;
       --gray: #6c757d;
       --dark: #212529;
@@ -21,82 +21,144 @@
 
     * {
       box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
 
     body {
-      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #f1efed 0%, #f3f2f2 100%);
+      min-height: 100vh;
       padding: 0;
-      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-      height: 100vh;
-      overflow: hidden;
-      display: flex;
+      margin: 0;
     }
 
-    .left-panel {
-      flex: 1;
-      background: 
-       #E04D00;
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
-      color: white;
+    .login-container {
+      width: 100%;
+      min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 50px;
+      padding: 15px;
+    }
+
+    .main-card {
+      background: white;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+      width: 100%;
+      max-width: 1100px;
+    }
+
+    /* Left Panel */
+    .left-panel {
+      background: linear-gradient(135deg, #E04D00 0%, #c44500 100%);
+      padding: 40px 35px;
+      color: white;
+      position: relative;
     }
 
     .left-content {
-      z-index: 1;
-      max-width: 550px;
-      animation: slideInUp 1.2s ease forwards;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      height: 100%;
     }
 
     .left-content h1 {
-      font-size: 44px;
+      font-size: 2rem;
       font-weight: 700;
-      margin-bottom: 20px;
-      line-height: 1.3;
+      margin-bottom: 15px;
+      line-height: 1.2;
     }
 
     .left-content p {
-      font-size: 18px;
-      line-height: 1.6;
+      font-size: 0.95rem;
+      line-height: 1.5;
       opacity: 0.95;
-      margin-bottom: 30px;
+      margin-bottom: 25px;
     }
 
-    .illustration {
-      width: 100%;
-      max-width: 400px;
-      margin-top: 40px;
-      animation: float 4s ease-in-out infinite;
-      filter: drop-shadow(0px 10px 25px rgba(0, 0, 0, 0.3));
+    .btn-homepage {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 10px 20px;
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50px;
+      font-weight: 600;
+      font-size: 13px;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      width: fit-content;
     }
 
-    .right-panel {
+    .btn-homepage:hover {
+      background: white;
+      color: var(--primary-dark);
+      transform: translateY(-2px);
+    }
+
+    .social-login-container {
+      display: flex;
+      gap: 12px;
+      margin-top: 25px;
+      flex-wrap: wrap;
+    }
+
+    .btn-social {
       flex: 1;
-      background: var(--light-bg);
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 40px;
-      position: relative;
-      animation: fadeInRight 1.2s ease forwards;
+      gap: 8px;
+      padding: 10px 16px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 50px;
+      font-weight: 500;
+      font-size: 13px;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      color: white;
+      min-width: 100px;
+    }
+
+    .btn-social:hover {
+      background: white;
+      transform: translateY(-2px);
+    }
+
+    .btn-google:hover {
+      color: var(--google-red);
+    }
+
+    .btn-facebook:hover {
+      color: var(--facebook-blue);
+    }
+
+    /* Right Panel */
+    .right-panel {
+      background: white;
+      padding: 40px 35px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .login-card {
       width: 100%;
-      max-width: 420px;
-      background: white;
-      border-radius: 18px;
-      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.08);
-      padding: 40px;
-      animation: slideUp 1s ease forwards;
+      max-width: 400px;
+      margin: 0 auto;
     }
 
     .login-card h3 {
-      font-size: 26px;
+      font-size: 1.6rem;
       font-weight: 700;
       color: var(--dark);
       margin-bottom: 8px;
@@ -104,45 +166,80 @@
 
     .login-card p {
       color: var(--gray);
-      font-size: 15px;
-      margin-bottom: 30px;
+      font-size: 0.85rem;
+      margin-bottom: 25px;
+    }
+
+    /* Password Field with Toggle */
+    .password-wrapper {
+      position: relative;
+    }
+
+    .password-wrapper .form-control {
+      padding-right: 45px;
+    }
+
+    .password-toggle {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--gray);
+      font-size: 1.1rem;
+      padding: 5px;
+      transition: color 0.2s ease;
+      z-index: 10;
+    }
+
+    .password-toggle:hover {
+      color: var(--primary);
+    }
+
+    .password-toggle:focus {
+      outline: none;
     }
 
     .form-control {
-      border-radius: 10px;
-      padding: 14px 16px;
-      border: 2px solid #e9ecef;
-      font-size: 15px;
-      transition: all 0.3s ease;
-    }
-
-    .form-control:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(25, 135, 84, 0.1);
-    }
-
-    .btn-login {
-      background: #E04D00;
-      border: none;
-      border-radius: 10px;
-      padding: 14px;
-      font-weight: 600;
-      font-size: 16px;
-      color: white;
+      border-radius: 12px;
+      padding: 12px 16px;
+      border: 1.5px solid #e9ecef;
+      font-size: 14px;
       transition: all 0.3s ease;
       width: 100%;
     }
 
+    .form-control:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(224, 77, 0, 0.1);
+      outline: none;
+    }
+
+    .btn-login {
+      background: var(--primary);
+      border: none;
+      border-radius: 12px;
+      padding: 12px;
+      font-weight: 600;
+      font-size: 15px;
+      color: white;
+      transition: all 0.3s ease;
+      width: 100%;
+      cursor: pointer;
+    }
+
     .btn-login:hover {
-      background: linear-gradient(135deg, #66d4a6, #81e6b7);
-      transform: translateY(-3px);
-      box-shadow: 0 5px 15px rgba(102, 212, 166, 0.4);
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(224, 77, 0, 0.3);
     }
 
     .divider {
       display: flex;
       align-items: center;
-      margin: 25px 0;
+      margin: 25px 0 20px;
     }
 
     .divider::before,
@@ -155,243 +252,450 @@
     .divider-text {
       padding: 0 15px;
       color: var(--gray);
-      font-size: 14px;
+      font-size: 12px;
       font-weight: 500;
-    }
-
-    .social-login-container {
-      display: flex;
-      gap: 15px;
-      margin-bottom: 25px;
-    }
-
-    .btn-social {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      padding: 12px;
-      border: 2px solid #e9ecef;
-      border-radius: 10px;
-      background: white;
-      font-weight: 600;
-      font-size: 16px;
-      transition: all 0.3s ease;
-      cursor: pointer;
-    }
-
-    .btn-google {
-      color: var(--google-red);
-    }
-
-    .btn-google:hover {
-      background: var(--google-red);
-      color: white;
-      border-color: var(--google-red);
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(219, 68, 55, 0.2);
-    }
-
-    .btn-facebook {
-      color: var(--facebook-blue);
-    }
-
-    .btn-facebook:hover {
-      background: var(--facebook-blue);
-      color: white;
-      border-color: var(--facebook-blue);
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(66, 103, 178, 0.2);
     }
 
     .text-link {
       color: var(--primary);
       text-decoration: none;
       font-weight: 500;
-      font-size: 14px;
+      font-size: 13px;
     }
 
     .text-link:hover {
       text-decoration: underline;
     }
 
-    @keyframes fadeInLeft {
-      from { opacity: 0; transform: translateX(-50px); }
-      to { opacity: 1; transform: translateX(0); }
+    .alert {
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 12px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
     }
 
-    @keyframes fadeInRight {
-      from { opacity: 0; transform: translateX(50px); }
-      to { opacity: 1; transform: translateX(0); }
+    .alert i {
+      margin-right: 10px;
     }
 
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(30px); }
-      to { opacity: 1; transform: translateY(0); }
+    .alert-success {
+      background: #d4edda;
+      border: 1px solid #c3e6cb;
+      color: #155724;
     }
 
-    @keyframes slideInUp {
-      from { opacity: 0; transform: translateY(40px); }
-      to { opacity: 1; transform: translateY(0); }
+    .alert-danger {
+      background: #f8d7da;
+      border: 1px solid #f5c6cb;
+      color: #721c24;
     }
 
-    @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-10px); }
+    .alert-warning {
+      background: #fff3cd;
+      border: 1px solid #ffeaa7;
+      color: #856404;
     }
 
-    @media (max-width: 992px) {
-      body {
-        flex-direction: column;
-        overflow-y: auto;
-      }
+    .alert-info {
+      background: #d1ecf1;
+      border: 1px solid #bee5eb;
+      color: #0c5460;
+    }
+
+    .form-check-label {
+      font-size: 13px;
+    }
+
+    /* ========== RESPONSIVE STYLES ========== */
+    
+    /* Tablet (768px - 991px) */
+    @media (min-width: 768px) and (max-width: 991px) {
       .left-panel {
-        flex: none;
-        height: 45vh;
-        text-align: center;
-        padding: 50px 30px;
+        padding: 30px 25px;
       }
+      
       .right-panel {
-        flex: none;
-        height: auto;
-        padding: 40px 20px;
+        padding: 30px 25px;
       }
-      .illustration {
-        display: none;
+      
+      .left-content h1 {
+        font-size: 1.6rem;
       }
+      
+      .login-card h3 {
+        font-size: 1.4rem;
+      }
+      
+      .btn-social {
+        padding: 8px 12px;
+        font-size: 12px;
+      }
+    }
+    
+    /* Mobile (up to 767px) - STACKED LAYOUT */
+    @media (max-width: 767px) {
+      .login-container {
+        padding: 10px;
+        align-items: stretch;
+      }
+      
+      .main-card {
+        border-radius: 20px;
+        flex-direction: column !important;
+      }
+      
+      /* Left Panel - Top section on mobile */
+      .left-panel {
+        padding: 30px 20px;
+        text-align: center;
+        border-radius: 20px 20px 0 0;
+      }
+      
+      .left-content {
+        align-items: center;
+      }
+      
+      .left-content h1 {
+        font-size: 1.5rem;
+        text-align: center;
+      }
+      
+      .left-content p {
+        font-size: 0.85rem;
+        text-align: center;
+      }
+      
+      .btn-homepage {
+        margin: 0 auto;
+        font-size: 12px;
+        padding: 8px 18px;
+      }
+      
+      .social-login-container {
+        justify-content: center;
+        margin-top: 20px;
+      }
+      
+      .btn-social {
+        padding: 8px 14px;
+        font-size: 12px;
+        min-width: 90px;
+      }
+      
+      /* Right Panel - Bottom section on mobile */
+      .right-panel {
+        padding: 25px 20px;
+        border-radius: 0 0 20px 20px;
+      }
+      
+      .login-card {
+        max-width: 100%;
+      }
+      
+      .login-card h3 {
+        font-size: 1.3rem;
+        text-align: center;
+      }
+      
+      .login-card p {
+        text-align: center;
+        font-size: 0.8rem;
+      }
+      
+      .form-control {
+        padding: 10px 14px;
+        font-size: 13px;
+      }
+      
+      .btn-login {
+        padding: 10px;
+        font-size: 14px;
+      }
+      
+      .d-flex.justify-content-between {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+      }
+      
+      .divider {
+        margin: 20px 0 15px;
+      }
+      
+      .divider-text {
+        font-size: 11px;
+      }
+      
+      .text-link {
+        font-size: 12px;
+      }
+      
+      .password-toggle {
+        right: 10px;
+        font-size: 1rem;
+      }
+    }
+    
+    /* Small Mobile (up to 480px) */
+    @media (max-width: 480px) {
+      .left-panel {
+        padding: 25px 15px;
+      }
+      
+      .right-panel {
+        padding: 20px 15px;
+      }
+      
+      .left-content h1 {
+        font-size: 1.3rem;
+      }
+      
+      .left-content p {
+        font-size: 0.75rem;
+      }
+      
+      .login-card h3 {
+        font-size: 1.2rem;
+      }
+      
       .social-login-container {
         flex-direction: column;
+        width: 100%;
+      }
+      
+      .btn-social {
+        width: 100%;
+      }
+      
+      .btn-homepage {
+        font-size: 11px;
+        padding: 7px 16px;
+      }
+      
+      .form-control {
+        padding: 8px 12px;
+        font-size: 13px;
+      }
+      
+      .alert {
+        padding: 8px 12px;
+        font-size: 11px;
+      }
+    }
+    
+    /* Extra Small (up to 360px) */
+    @media (max-width: 360px) {
+      .left-panel {
+        padding: 20px 12px;
+      }
+      
+      .right-panel {
+        padding: 18px 12px;
+      }
+      
+      .left-content h1 {
+        font-size: 1.2rem;
+      }
+      
+      .login-card h3 {
+        font-size: 1.1rem;
+      }
+      
+      .btn-login {
+        font-size: 13px;
       }
     }
 
-    .btn-homepage {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 12px 24px;
-      background: transparent;
-      color: white;
-      border: 2px solid white;
-      border-radius: 50px;
-      font-weight: 600;
-      font-size: 16px;
-      text-decoration: none;
-      transition: all 0.3s ease;
-      margin-top: 20px;
-      animation: fadeInLeft 1.5s ease forwards;
+    /* Animation */
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
-    .btn-homepage:hover {
-      background: white;
-      color: var(--primary-dark);
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
+    .main-card {
+      animation: slideUp 0.5s ease forwards;
+    }
+
+    /* Custom Checkbox */
+    .form-check-input:checked {
+      background-color: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .form-check-input:focus {
+      box-shadow: 0 0 0 0.2rem rgba(224, 77, 0, 0.25);
     }
   </style>
 </head>
 <body>
 
-<div class="left-panel">
-  <div class="left-content">
-    <h1>Welcome to Eduquity Hardware Management</h1>
-    <p> Securely manage company hardware assets, allocations,audits, and tracking — all in one place.</p>
+<div class="login-container">
+  <div class="main-card row g-0">
+    <!-- Left Panel - Branding -->
+    <div class="col-12 col-md-6 left-panel">
+      <div class="left-content">
+        <h1>Welcome to Eduquity</h1>
+        <p>Securely manage company hardware assets, allocations, audits, and tracking — all in one place.</p>
 
-    <a href="{% url 'home' %}" class="btn-homepage">
-      <i class="fas fa-home me-2"></i> Go to Homepage
-    </a><hr>
-      <div class="social-login-container">
-        <button type="button" class="btn-social btn-google" onclick="handleGoogleLogin()">
-          <i class="fab fa-google"></i>
-          <span>Google</span>
-        </button>
-        <button type="button" class="btn-social btn-facebook" onclick="handleFacebookLogin()">
-          <i class="fab fa-facebook-f"></i>
-          <span>Facebook</span>
-        </button>
+        <a href="{% url 'home' %}" class="btn-homepage">
+          <i class="fas fa-home me-2"></i> Go to Homepage
+        </a>
+
+        <div class="social-login-container">
+          <button type="button" class="btn-social btn-google" onclick="handleGoogleLogin()">
+            <i class="fab fa-google"></i>
+            <span>Google</span>
+          </button>
+          <button type="button" class="btn-social btn-facebook" onclick="handleFacebookLogin()">
+            <i class="fab fa-facebook-f"></i>
+            <span>Facebook</span>
+          </button>
+        </div>
       </div>
+    </div>
+
+    <!-- Right Panel - Login Form -->
+    <div class="col-12 col-md-6 right-panel">
+      <div class="login-card">
+        <h3>Welcome Back</h3>
+        <p>Sign in to access your Eduquity Hardware</p>
+
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+              <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+              <span>{{ message }}</span>
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        <form method="post" action="{% url 'login' %}">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label">Employee ID / Username</label>
+            <input type="text" class="form-control" name="username" placeholder="Enter Employee ID" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Password</label>
+            <div class="password-wrapper">
+              <input type="password" class="form-control" name="password" id="passwordField" placeholder="Enter password" required>
+              <button type="button" class="password-toggle" id="togglePassword">
+                <i class="fas fa-eye"></i>
+              </button>
+            </div>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input" id="rememberMe">
+              <label for="rememberMe" class="form-check-label">Remember me</label>
+            </div>
+            <!-- <a href="{% url 'forgot_password' %}" class="text-link">Forgot password?</a> -->
+          </div>
+          <button type="submit" class="btn btn-login">
+            <i class="fas fa-sign-in-alt me-2"></i> Sign In
+          </button>
+        </form>
+      </div>
+    </div>
   </div>
 </div>
 
-
-{% block auth_content %}
-  <div class="right-panel">
-    <div class="login-card">
-      <h3>Welcome Back</h3>
-      <p>Sign in to access your Eduquity Hardware</p>
-      {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}">
-                <i class="bi bi-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'danger' %}exclamation-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
-                <span>{{ message }}</span>
-            </div>
-        {% endfor %}
-    {% endif %}
-
-      <form method="post" action="{% url 'login' %}">
-        {% csrf_token %}
-        <div class="mb-3">
-          <label class="form-label">Employee ID</label>
-          <input type="text" class="form-control" name="username" placeholder="Enter Employee ID" required>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Password</label>
-          <input type="password" class="form-control" name="password" placeholder="Enter password" required>
-        </div>
-        <div class="d-flex justify-content-between align-items-center mb-4">
-          <div class="form-check">
-            <input type="checkbox" class="form-check-input" id="rememberMe">
-            <label for="rememberMe" class="form-check-label">Remember me</label>
-          </div>
-<a href="{% url 'forgot_password' %}" class="text-link">Forgot password?</a>
-        </div>
-        <button type="submit" class="btn btn-login w-100">
-          <i class="fas fa-sign-in-alt me-2"></i> Sign In
-        </button>
-      </form>
-
-      <!-- <div class="text-center mt-4">
-        <p class="mb-2 text-muted">Are you Manager</p>
-        <a href="{% url 'manager_register' %}" class="text-link fw-semibold">Register Manager</a>
-      </div> -->
-    </div>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const otpInput = document.querySelector('input[name="otp"]');
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  // Show/Hide Password Toggle
+  document.addEventListener('DOMContentLoaded', function() {
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordField = document.getElementById('passwordField');
     
-    otpInput.focus();
-    
-    otpInput.addEventListener('input', function(e) {
-        if (this.value.length === 6) {
-            this.form.submit();
+    if (togglePassword && passwordField) {
+      togglePassword.addEventListener('click', function() {
+        // Toggle the type attribute
+        const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordField.setAttribute('type', type);
+        
+        // Toggle the eye icon
+        const icon = togglePassword.querySelector('i');
+        if (icon) {
+          icon.classList.toggle('fa-eye');
+          icon.classList.toggle('fa-eye-slash');
         }
-    });
-    
-    let timeLeft = 300; 
-    const timerElement = document.getElementById('otp-timer');
-    
-    if (timerElement) {
-        const timerInterval = setInterval(() => {
-            const minutes = Math.floor(timeLeft / 60);
-            const seconds = timeLeft % 60;
-            
-            timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-            
-            if (timeLeft <= 0) {
-                clearInterval(timerInterval);
-                timerElement.innerHTML = '<span class="text-danger">OTP Expired!</span>';
-                otpInput.disabled = true;
-                otpInput.placeholder = "OTP Expired - Request new one";
-            }
-            
-            timeLeft--;
-        }, 1000);
+      });
     }
-});
+  });
+
+  // Social login handlers (implement as needed)
+  function handleGoogleLogin() {
+    window.location.href = '/auth/google/login/';
+  }
+
+  function handleFacebookLogin() {
+    window.location.href = '/auth/facebook/login/';
+  }
+
+  // Remember Me functionality
+  document.addEventListener('DOMContentLoaded', function() {
+    const rememberCheckbox = document.getElementById('rememberMe');
+    const usernameInput = document.querySelector('input[name="username"]');
+    
+    // Check if saved username exists
+    const savedUsername = localStorage.getItem('savedUsername');
+    if (savedUsername) {
+      usernameInput.value = savedUsername;
+      if (rememberCheckbox) rememberCheckbox.checked = true;
+    }
+    
+    // Save username when form is submitted
+    const form = document.querySelector('form');
+    if (form) {
+      form.addEventListener('submit', function() {
+        if (rememberCheckbox && rememberCheckbox.checked) {
+          localStorage.setItem('savedUsername', usernameInput.value);
+        } else {
+          localStorage.removeItem('savedUsername');
+        }
+      });
+    }
+    
+    // OTP Timer functionality (if on OTP page)
+    const otpInput = document.querySelector('input[name="otp"]');
+    if (otpInput) {
+      otpInput.focus();
+      
+      otpInput.addEventListener('input', function(e) {
+        if (this.value.length === 6) {
+          this.form.submit();
+        }
+      });
+      
+      let timeLeft = 300;
+      const timerElement = document.getElementById('otp-timer');
+      
+      if (timerElement) {
+        const timerInterval = setInterval(() => {
+          const minutes = Math.floor(timeLeft / 60);
+          const seconds = timeLeft % 60;
+          
+          timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+          
+          if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            timerElement.innerHTML = '<span class="text-danger">OTP Expired!</span>';
+            if (otpInput) otpInput.disabled = true;
+          }
+          
+          timeLeft--;
+        }, 1000);
+      }
+    }
+  });
 </script>
 </body>
 </html>
-{% endblock %}

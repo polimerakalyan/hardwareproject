@@ -20,6 +20,7 @@ from django.db.models import Q
 
 # ============== AUTHENTICATION VIEWS ==============
 
+
 def manager_register(request):
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -27,13 +28,24 @@ def manager_register(request):
         password = request.POST.get('password')
         confirm_password = request.POST.get('confirm_password')
         phone = request.POST.get('phone')
+        branch_location = request.POST.get('branch_location')
+        first_name = request.POST.get('first_name')
+        last_name = request.POST.get('last_name')
         
         if password != confirm_password:
             messages.error(request, 'Passwords do not match!')
             return redirect('manager_register')
         
+        if len(password) < 8:
+            messages.error(request, 'Password must be at least 8 characters long!')
+            return redirect('manager_register')
+        
         if CustomUser.objects.filter(username=username).exists():
             messages.error(request, 'Username already exists!')
+            return redirect('manager_register')
+        
+        if CustomUser.objects.filter(email=email).exists():
+            messages.error(request, 'Email already exists!')
             return redirect('manager_register')
         
         user = CustomUser.objects.create_user(
@@ -42,12 +54,21 @@ def manager_register(request):
             password=password,
             user_type='manager',
             phone=phone,
-            is_first_login=False
+            is_first_login=False,
+            first_name=first_name,
+            last_name=last_name
         )
-        messages.success(request, 'Manager account created successfully! Please login.')
+        
+        # Store branch location in user profile (you may need to add this field to CustomUser model)
+        user.branch_location = branch_location
+        user.save()
+        
+        messages.success(request, f'Manager account created successfully for {first_name} {last_name}! Please login.')
         return redirect('login')
     
     return render(request, 'auth/manager_register.html')
+
+      
 def user_login(request):
     if request.user.is_authenticated:
         if request.user.user_type == 'manager':

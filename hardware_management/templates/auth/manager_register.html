@@ -2,82 +2,269 @@
 {% block title %}Manager Registration - Eduquity Hardware Management{% endblock %}
 
 {% block auth_content %}
-<div class="login-container">
-    <div class="logo-container">
-        <div class="logo" style="background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);">
-            <i class="bi bi-person-badge"></i>
-        </div>
-        <h3>Manager Registration</h3>
-        <p class="text-muted">Create a new manager account</p>
-    </div>
-
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                <i class="bi bi-exclamation-circle"></i> {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+<div class="register-container">
+    <div class="register-card">
+        <div class="text-center mb-4">
+            <div class="logo-wrapper mb-3">
+                <div class="logo-icon">
+                    <i class="bi bi-person-badge"></i>
+                </div>
             </div>
-        {% endfor %}
-    {% endif %}
-
-    <form method="POST" action="{% url 'manager_register' %}">
-        {% csrf_token %}
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label for="username" class="form-label">Username *</label>
-                <input type="text" class="form-control" id="username" name="username" 
-                       placeholder="Choose username" required>
-            </div>
-            <div class="col-md-6 mb-3">
-                <label for="email" class="form-label">Email Address *</label>
-                <input type="email" class="form-control" id="email" name="email" 
-                       placeholder="your.email@eduquity.com" required>
-            </div>
+            <h2 class="fw-bold">Manager Registration</h2>
+            <p class="text-muted">Create a new manager account for your branch</p>
         </div>
 
-        <div class="mb-3">
-            <label for="phone" class="form-label">Phone Number</label>
-            <input type="tel" class="form-control" id="phone" name="phone" 
-                   placeholder="+91 9876543210">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    <i class="bi bi-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-circle{% else %}info-circle{% endif %} me-2"></i>
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="POST" action="{% url 'manager_register' %}">
+            {% csrf_token %}
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="first_name" class="form-label">First Name *</label>
+                    <input type="text" class="form-control" id="first_name" name="first_name" 
+                           placeholder="Enter first name" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="last_name" class="form-label">Last Name</label>
+                    <input type="text" class="form-control" id="last_name" name="last_name" 
+                           placeholder="Enter last name">
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="username" class="form-label">Username *</label>
+                    <input type="text" class="form-control" id="username" name="username" 
+                           placeholder="Choose username" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="email" class="form-label">Email Address *</label>
+                    <input type="email" class="form-control" id="email" name="email" 
+                           placeholder="your.email@eduquity.com" required>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="phone" class="form-label">Phone Number</label>
+                    <input type="tel" class="form-control" id="phone" name="phone" 
+                           placeholder="+91 9876543210">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="branch_location" class="form-label">Branch Location *</label>
+                    <select class="form-select" id="branch_location" name="branch_location" required>
+                        <option value="">Select Branch Location</option>
+                        <option value="Hyderabad">Hyderabad - Head Office</option>
+                        <option value="Bangalore">Bangalore - South Hub</option>
+                        <option value="Mumbai">Mumbai - West Hub</option>
+                        <option value="Delhi">Delhi - North Hub</option>
+                        <option value="Chennai">Chennai - East Hub</option>
+                        <option value="Pune">Pune - Satellite Office</option>
+                        <option value="Kolkata">Kolkata - Regional Office</option>
+                        <option value="Ahmedabad">Ahmedabad - Regional Office</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="password" class="form-label">Password *</label>
+                    <div class="password-wrapper">
+                        <input type="password" class="form-control" id="password" name="password" 
+                               placeholder="Enter password" required>
+                        <button type="button" class="password-toggle" onclick="togglePassword('password')">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="confirm_password" class="form-label">Confirm Password *</label>
+                    <div class="password-wrapper">
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" 
+                               placeholder="Confirm password" required>
+                        <button type="button" class="password-toggle" onclick="togglePassword('confirm_password')">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <div class="form-text text-muted">
+                    <i class="bi bi-info-circle"></i> Password requirements:
+                    <ul class="small mt-2 mb-0">
+                        <li>At least 8 characters long</li>
+                        <li>Use a mix of letters, numbers, and symbols for better security</li>
+                    </ul>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 py-2">
+                <i class="bi bi-person-plus me-2"></i> Register as Manager
+            </button>
+        </form>
+
+        <div class="mt-4 text-center">
+            <p class="mb-2">Already have an account?</p>
+            <a href="{% url 'login' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-box-arrow-in-right me-1"></i> Sign In
+            </a>
         </div>
 
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label for="password" class="form-label">Password *</label>
-                <input type="password" class="form-control" id="password" name="password" 
-                       placeholder="Enter password" required>
-            </div>
-            <div class="col-md-6 mb-3">
-                <label for="confirm_password" class="form-label">Confirm Password *</label>
-                <input type="password" class="form-control" id="confirm_password" name="confirm_password" 
-                       placeholder="Confirm password" required>
-            </div>
-        </div>
+        <hr class="my-4">
 
-        <div class="mb-3">
+        <div class="text-center">
             <small class="text-muted">
-                <i class="bi bi-info-circle"></i> Password must be at least 8 characters long
+                <i class="bi bi-shield-lock"></i> Manager accounts have full administrative privileges
+                <br>
+                Only authorized personnel should create manager accounts
             </small>
         </div>
-
-        <button type="submit" class="btn btn-eduquity w-100">
-            <i class="bi bi-person-plus"></i> Register as Manager
-        </button>
-    </form>
-
-    <div class="mt-4 text-center">
-        <p class="mb-0">Already have an account?</p>
-        <a href="{% url 'login' %}" class="btn btn-outline-primary btn-sm">
-            <i class="bi bi-box-arrow-in-right"></i> Sign In
-        </a>
     </div>
 </div>
 
-<div class="text-center mt-4">
-    <small class="text-muted">
-        <i class="bi bi-shield-lock"></i> Manager accounts have full administrative privileges
-        <br>
-        Only authorized personnel should create manager accounts
-    </small>
-</div>
+<style>
+    .register-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .register-card {
+        max-width: 700px;
+        width: 100%;
+        background: white;
+        border-radius: 20px;
+        padding: 40px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        animation: slideUp 0.5s ease;
+    }
+
+    .logo-wrapper {
+        display: flex;
+        justify-content: center;
+    }
+
+    .logo-icon {
+        width: 70px;
+        height: 70px;
+        background: linear-gradient(135deg, #E04D00, #FF6B1A);
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 8px 20px rgba(224, 77, 0, 0.3);
+    }
+
+    .logo-icon i {
+        font-size: 32px;
+        color: white;
+    }
+
+    .form-control, .form-select {
+        border-radius: 10px;
+        padding: 10px 15px;
+        border: 1.5px solid #e9ecef;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: #E04D00;
+        box-shadow: 0 0 0 3px rgba(224, 77, 0, 0.1);
+    }
+
+    .password-wrapper {
+        position: relative;
+    }
+
+    .password-toggle {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: #6c757d;
+    }
+
+    .password-toggle:hover {
+        color: #E04D00;
+    }
+
+    .btn-primary {
+        background: #E04D00;
+        border: none;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover {
+        background: #c44500;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(224, 77, 0, 0.3);
+    }
+
+    .btn-outline-secondary {
+        border-radius: 10px;
+        padding: 8px 20px;
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .register-card {
+            padding: 25px;
+        }
+        
+        .logo-icon {
+            width: 55px;
+            height: 55px;
+        }
+        
+        .logo-icon i {
+            font-size: 26px;
+        }
+    }
+</style>
+
+<script>
+    function togglePassword(fieldId) {
+        const field = document.getElementById(fieldId);
+        const toggle = field.nextElementSibling;
+        const icon = toggle.querySelector('i');
+        
+        if (field.type === 'password') {
+            field.type = 'text';
+            icon.classList.remove('bi-eye');
+            icon.classList.add('bi-eye-slash');
+        } else {
+            field.type = 'password';
+            icon.classList.remove('bi-eye-slash');
+            icon.classList.add('bi-eye');
+        }
+    }
+</script>
 {% endblock %}
