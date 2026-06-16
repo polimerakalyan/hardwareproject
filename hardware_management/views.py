@@ -466,7 +466,7 @@ Your account has been created successfully. Here are your login credentials:
 
 Username: {username}
 Password: {default_password}
-Login URL: http://127.0.0.1:8000/login/
+Login URL: http://eduquityinventory.co.in/login/
 
 Important Instructions:
 1. Use the password above to login
@@ -505,8 +505,8 @@ Eduquity Hardware Management Team
                 <p><strong>Full Name:</strong> {name}</p>
                 <p><strong>Username:</strong> {username}</p>
                 <p><strong>Password:</strong> <code style="background: #fff; padding: 5px 10px; border-radius: 3px; font-size: 14px;">{default_password}</code></p>
-                <p><strong>Login URL:</strong> <a href="http://127.0.0.1:8000/login/">http://127.0.0.1:8000/login/</a></p>
-                <a href="http://127.0.0.1:8000/login/" class="btn">Login Now</a>
+                <p><strong>Login URL:</strong> <a href="http://eduquityinventory.co.in/login/">http://eduquityinventory.co.in/login/</a></p>
+                <a href="http://eduquityinventory.co.in/login/" class="btn">Login Now</a>
             </div>
             
             <p><strong>About the System:</strong><br>
@@ -709,7 +709,7 @@ Your account has been created successfully. Here are your login credentials:
 
 Username: {emp['username']}
 Password: {default_password}
-Login URL: http://127.0.0.1:8000/login/
+Login URL: http://eduquityinventory.co.in/login/
 
 Important Instructions:
 1. Use the password above to login
