@@ -689,6 +689,7 @@ def bulk_create_employees(request):
     return render(request, 'manager/bulk_create_employees.html', context)
 
 
+
 def send_bulk_welcome_emails(employees, manager):
     """Send welcome emails to multiple employees with default password"""
     from django.core.mail import send_mail
@@ -698,16 +699,24 @@ def send_bulk_welcome_emails(employees, manager):
     
     for emp in employees:
         try:
+            name = emp.get('name', 'Employee')
+            username = emp.get('username', 'user')
+            email = emp.get('email', '')
+            
+            if not email:
+                print(f"Warning: No email provided for {name}")
+                continue
+                
             send_mail(
                 subject='Your Eduquity Hardware Management Account Credentials',
                 message=f'''
-Dear {emp['name']},
+Dear {name},
 
 Welcome to Eduquity Hardware Management System!
 
 Your account has been created successfully. Here are your login credentials:
 
-Username: {emp['username']}
+Username: {username}
 Password: {default_password}
 Login URL: http://eduquityinventory.co.in/login/
 
@@ -719,12 +728,68 @@ Important Instructions:
 Best regards,
 Eduquity Hardware Management Team
                 ''',
+                html_message=f'''
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background: linear-gradient(90deg, #E04D00 0%, #FF6B1A 100%); color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }}
+        .content {{ background: #f9f9f9; padding: 30px; border: 1px solid #ddd; border-top: none; border-radius: 0 0 5px 5px; }}
+        .credentials {{ background: #e8f4fc; border: 2px solid #E04D00; padding: 15px; margin: 20px 0; border-radius: 5px; }}
+        .footer {{ margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 12px; }}
+        .btn {{ display: inline-block; padding: 10px 20px; background: #E04D00; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0; }}
+        .btn:hover {{ background: #c44500; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Welcome to Eduquity Hardware Management</h2>
+        </div>
+        <div class="content">
+            <p>Dear <strong>{name}</strong>,</p>
+            
+            <p>Your account has been created successfully in the Eduquity Hardware Management System.</p>
+            
+            <div class="credentials">
+                <h3>Your Login Credentials:</h3>
+                <p><strong>Full Name:</strong> {name}</p>
+                <p><strong>Username:</strong> {username}</p>
+                <p><strong>Password:</strong> <code style="background: #fff; padding: 5px 10px; border-radius: 3px; font-size: 14px;">{default_password}</code></p>
+                <p><strong>Login URL:</strong> <a href="http://eduquityinventory.co.in/login/">http://eduquityinventory.co.in/login/</a></p>
+                <a href="http://eduquityinventory.co.in/login/" class="btn">Login Now</a>
+            </div>
+            
+            <p><strong>About the System:</strong><br>
+            The Eduquity Hardware Management System allows you to:
+            <ul>
+                <li>View your hardware assignments</li>
+                <li>Enter serial numbers of assigned hardware</li>
+                <li>Track hardware status</li>
+                <li>Communicate with your manager</li>
+            </ul>
+            </p>
+            
+            <div class="footer">
+                <p><strong>Eduquity Hardware Management Team</strong><br>
+                Established in 2000 - Thought-leader in the Indian assessment industry</p>
+                <p><em>This is an automated email. Please do not reply to this message.</em></p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+                ''',
                 from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[emp['email']],
+                recipient_list=[email],
                 fail_silently=True,
             )
         except Exception as e:
-            print(f"Failed to send email to {emp['email']}: {str(e)}")
+            print(f"Failed to send email to {emp.get('email', 'unknown')}: {str(e)}")
+
+
 
 
 def sample_csv_template():
