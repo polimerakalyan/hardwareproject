@@ -1,361 +1,250 @@
 {% extends 'base.html' %}
-{% block title %}Enter Serial Numbers - Eduquity Hardware Management{% endblock %}
-
-{% block page_title %}
-    {% if editing %}
-    <i class="bi bi-pencil"></i> Edit Serial Numbers
-    {% else %}
-    <i class="bi bi-upc-scan"></i> Enter Serial Numbers
-    {% endif %}
-{% endblock %}
-
-{% block page_subtitle %}
-    Project: <strong>{{ assignment.project.project_name }}</strong> | Location: {{ assignment.project.location }}
-{% endblock %}
+{% block title %}Enter Asset Numbers - Eduquity Hardware Management{% endblock %}
 
 {% block content %}
-<div class="row">
+<div class="row mb-4">
     <div class="col-md-12">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
-                <h5 class="mb-0 fw-bold">
-                    <i class="bi bi-laptop me-2 text-primary"></i>Hardware Items
-                </h5>
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2><i class="bi bi-upc-scan"></i> 
+                    {% if editing %}
+                    Edit Asset Numbers
+                    {% else %}
+                    Enter Asset Numbers
+                    {% endif %}
+                </h2>
+                <p class="text-muted">Enter Asset Numbers from your physical hardware devices</p>
+            </div>
+            <div>
                 <a href="{% url 'my_assignment_details' assignment.id %}" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left me-2"></i>Back to Assignment
+                    <i class="bi bi-arrow-left"></i> Back to Assignment
                 </a>
             </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <div class="card border-0 shadow-lg">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-upc-scan me-2"></i> 
+                    Enter Asset Numbers
+                </h4>
+            </div>
             <div class="card-body">
-                {% if assignment.actual_return_date %}
-                <div class="alert alert-danger d-flex align-items-center" role="alert">
-                    <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
-                    <div>This assignment has been returned. You cannot enter serial numbers.</div>
+                <!-- Assignment Info -->
+                <div class="alert alert-info mb-4">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong><i class="bi bi-folder"></i> Project:</strong> {{ assignment.project.project_name }}
+                        </div>
+                        <div class="col-md-6">
+                            <strong><i class="bi bi-geo-alt"></i> Location:</strong> {{ assignment.exam_city }}
+                        </div>
+                        <div class="col-md-6 mt-2">
+                            <strong><i class="bi bi-person"></i> Employee:</strong> {{ assignment.employee.get_full_name|default:assignment.employee.username }}
+                        </div>
+                        <div class="col-md-6 mt-2">
+                            <strong><i class="bi bi-calendar"></i> Assigned Date:</strong> {{ assignment.assigned_date|date:"d M Y" }}
+                        </div>
+                    </div>
                 </div>
-                {% else %}
-                
+
                 {% if messages %}
                     {% for message in messages %}
-                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show d-flex align-items-center" role="alert">
-                            <i class="bi bi-{% if message.tags == 'success' %}check-circle-fill{% elif message.tags == 'error' %}exclamation-circle-fill{% elif message.tags == 'warning' %}exclamation-triangle-fill{% else %}info-circle-fill{% endif %} me-2 fs-4"></i>
-                            <div>{{ message }}</div>
-                            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            <i class="bi bi-{% if message.tags == 'success' %}check-circle{% else %}exclamation-circle{% endif %} me-2"></i>
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         </div>
                     {% endfor %}
                 {% endif %}
-                
-                <!-- <div class="alert alert-info bg-opacity-10 border-0 d-flex align-items-center mb-4">
-                    <i class="bi bi-info-circle-fill text-primary fs-4 me-3"></i>
-                    <div>
-                        {% if editing %}
-                        <strong>Update the serial numbers</strong> for your assigned hardware.
-                        {% else %}
-                        <strong>Enter the actual serial numbers</strong> from the physical hardware you received.
-                        {% endif %}
-                        These will be verified by your manager.
-                    </div>
-                </div> -->
-                
-                <form method="POST" action="{% if editing %}{% url 'edit_serial_numbers' assignment.id %}{% else %}{% url 'enter_serial_numbers' assignment.id %}{% endif %}">
-                    {% csrf_token %}
-                    
+
+                <!-- Expected Asset Numbers List (Hidden - For reference only) -->
+                <div class="pending-section mb-4">
+                    <h5 class="mb-3">
+                        <i class="bi bi-clock-history text-warning me-2"></i>
+                        Pending Verification ({{ pending_items|length }})
+                    </h5>
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="bg-light">
+                        <table class="table table-sm">
+                            <thead class="table-light">
                                 <tr>
-                                    <th class="px-3" style="width: 50px;">#</th>
+                                    <th>#</th>
                                     <th>Hardware Type</th>
-                                    <th>Model</th>
-                                    <th>Brand</th>
-                                    <th style="min-width: 150px;">Expected Serial</th>
-                                    <th style="min-width: 200px;">Actual Serial Number *</th>
-                                    <th style="width: 100px;">Status</th>
+                                    <!-- <th>Expected Asset Number</th> -->
+                                    <th>Status</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                {% for item in items %}
-                                <tr>
-                                    <td class="px-3">{{ forloop.counter }}</td>
+                            <tbody id="pendingTableBody">
+                                {% for item in pending_items %}
+                                <tr id="pendingRow_{{ item.id }}" 
+                                    data-item-id="{{ item.id }}" 
+                                    data-hardware-id="{{ item.hardware.id }}" 
+                                    data-hardware-type="{{ item.hardware.hardware_type.name }}"
+                                    data-expected-asset="{{ item.asset_number }}">
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>{{ item.hardware.hardware_type.name }}</td>
+                                    <!-- <td>
+                                        <code class="expected-asset">{{ item.asset_number }}</code>
+                                    </td> -->
                                     <td>
-                                        <strong>{{ item.hardware.hardware_type.name }}</strong>
-                                    </td>
-                                    <td>{{ item.hardware.model_name }}</td>
-                                    <td>{{ item.hardware.brand|default:"-" }}</td>
-                                    <td>
-                                        <code class="bg-light px-3 py-2 rounded">{{ item.hardware.serial_number }}</code>
-                                    </td>
-                                    <td>
-                                        <input type="text" 
-                                               name="serial_{{ item.id }}" 
-                                               id="serial-{{ forloop.counter }}"
-                                               class="form-control serial-input" 
-                                               value="{{ item.existing_serial }}"
-                                               placeholder="Enter actual serial"
-                                               required
-                                               oncopy="return false" 
-                                               onpaste="return false" 
-                                               oncut="return false"
-                                               oncontextmenu="return false"
-                                               onkeydown="return disableCopyPasteKeys(event)"
-                                               data-expected="{{ item.hardware.serial_number }}">
-                                        <!-- <small class="text-muted mt-1 d-block">
-                                            <i class="bi bi-info-circle"></i> Copy & paste disabled - Type manually or Scan
-                                        </small> -->
-                                    </td>
-                                    <td>
-                                        {% if item.existing_serial %}
-                                            {% if item.serial_entry.verified %}
-                                                <span class="badge bg-success text-white px-3 py-2">
-                                                    <i class="bi bi-check-circle me-1"></i> Verified
-                                                </span>
-                                            {% else %}
-                                                <span class="badge bg-warning text-white px-3 py-2">
-                                                    <i class="bi bi-clock me-1"></i> Pending
-                                                </span>
-                                            {% endif %}
-                                        {% else %}
-                                            <span class="badge bg-danger text-white px-3 py-2">
-                                                <i class="bi bi-exclamation-circle me-1"></i> Not Entered
-                                            </span>
-                                        {% endif %}
+                                        <span class="badge bg-warning">
+                                            <i class="bi bi-clock"></i> Awaiting Scan
+                                        </span>
                                     </td>
                                 </tr>
-                                {% empty %}
+                                {% endfor %}
+                                {% if not pending_items %}
+                                <tr id="noPendingRow">
+                                    <td colspan="4" class="text-center py-3 text-success">
+                                        <i class="bi bi-check-circle"></i> All hardware verified!
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="alert alert-warning alert-sm mt-2">
+                        <i class="bi bi-info-circle me-1"></i> 
+                        <small>Enter the <strong>Asset Number</strong> exactly as shown above. The system will verify it matches.</small>
+                    </div>
+                </div>
+
+                <!-- Scan Input Section -->
+                <div class="scan-section mb-4">
+                    <div class="card bg-light border-0">
+                        <div class="card-body">
+                            <div class="text-center mb-3">
+                                <i class="bi bi-qr-code-scan display-1 text-primary"></i>
+                                <h5 class="mt-2">Scan or Enter Asset Number</h5>
+                                <p class="text-muted small">Use a barcode scanner or type the Asset Number from your physical device</p>
+                            </div>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text bg-white">
+                                    <i class="bi bi-upc-scan text-primary"></i>
+                                </span>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="scanInput" 
+                                       placeholder="Scan or type Asset Number from device..."
+                                       autofocus
+                                       autocomplete="off">
+                                <button class="btn btn-primary" id="scanBtn" type="button">
+                                    <i class="bi bi-search"></i> Verify
+                                </button>
+                            </div>
+                            <div id="scanFeedback" class="mt-2"></div>
+                            <small class="text-muted d-block mt-1">
+                                <i class="bi bi-info-circle"></i> Enter the <strong>Asset Number</strong> from the sticker on your device
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Verified Hardware List -->
+                <div class="verified-section">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            Verified Hardware ({{ verified_items|length }} / {{ total_items }})
+                        </h5>
+                        <span class="badge bg-success rounded-pill" id="progressBadge">0%</span>
+                    </div>
+                    
+                    <div class="progress mb-3" style="height: 10px;">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: 0%" id="progressBar"></div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
                                 <tr>
-                                    <td colspan="7" class="text-center py-5">
-                                        <div class="py-4">
-                                            <i class="bi bi-laptop" style="font-size: 3rem; color: #dee2e6;"></i>
-                                            <h4 class="mt-3 text-dark">No Hardware Items</h4>
-                                            <p class="text-muted mb-0">No hardware items found for this assignment</p>
-                                        </div>
+                                    <th>#</th>
+                                    <th>Hardware Type</th>
+                                    <th>Entered Asset Number</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="verifiedTableBody">
+                                {% for item in verified_items %}
+                                <tr data-item-id="{{ item.id }}" data-verified="true">
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>{{ item.hardware.hardware_type.name }}</td>
+                                    <td>
+                                        <code class="entered-asset">{{ item.existing_asset }}</code>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle"></i> Verified
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-danger remove-verified" data-item-id="{{ item.id }}">
+                                            <i class="bi bi-arrow-return-left"></i> Undo
+                                        </button>
                                     </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
+                </div>
+
+                <!-- Submit Form -->
+                <form method="POST" id="assetForm" action="{% url 'enter_serial_numbers' assignment.id %}">
+                    {% csrf_token %}
+                    <div id="assetInputsContainer"></div>
                     
-                    {% if items %}
-                    <!-- <div class="alert alert-warning bg-opacity-10 border-0 d-flex mt-4">
-                        <i class="bi bi-exclamation-triangle-fill text-warning fs-4 me-3"></i>
-                        <div>
-                            <strong>Important:</strong>
-                            <ul class="mb-0 mt-2">
-                                <li>Ensure serial numbers are accurate - copy & paste are disabled (must type manually)</li>
-                                <li>Match the serial number on the physical device</li>
-                                <li>Verified serials cannot be edited</li>
-                                <li>Incorrect entries may delay verification</li>
-                            </ul>
-                        </div>
-                    </div> -->
-                    
-                    <div class="d-flex justify-content-end gap-2 mt-4">
-                        <button type="submit" class="btn btn-primary px-4">
-                            <i class="bi bi-save me-2"></i>
-                            {% if editing %}
-                            Update Serial Numbers
-                            {% else %}
-                            Submit Serial Numbers
-                            {% endif %}
-                        </button>
-                        <a href="{% url 'my_assignment_details' assignment.id %}" class="btn btn-outline-secondary px-4">
-                            <i class="bi bi-x-circle me-2"></i>Cancel
+                    <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                        <a href="{% url 'my_assignment_details' assignment.id %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> Cancel
                         </a>
+                        <button type="submit" class="btn btn-success" id="submitBtn" {% if not verified_items %}disabled{% endif %}>
+                            <i class="bi bi-check-circle"></i> Submit {{ verified_items|length }} Verified Asset Number(s)
+                        </button>
                     </div>
-                    {% endif %}
                 </form>
-                {% endif %}
             </div>
         </div>
     </div>
 </div>
-
-<div class="toast-container position-fixed bottom-0 end-0 p-3">
-    <div id="notificationToast" class="toast align-items-center text-white bg-warning border-0" role="alert" aria-live="assertive" aria-atomic="true">
-        <div class="d-flex">
-            <div class="toast-body">
-                <i class="bi bi-exclamation-triangle me-2"></i>Action disabled
-            </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-        </div>
-    </div>
-</div>
-
-<script>
-    function disableCopyPasteKeys(event) {
-        if ((event.ctrlKey || event.metaKey) && 
-            (event.key === 'c' || event.key === 'v' || event.key === 'x' || event.key === 'a')) {
-            event.preventDefault();
-            
-            showToast('warning', 'Copy, paste, cut and select all are disabled - please type manually');
-            return false;
-        }
-        return true;
-    }
-    
-    function showToast(type, message) {
-        const toast = new bootstrap.Toast(document.getElementById('notificationToast'));
-        const toastElement = document.getElementById('notificationToast');
-        
-        toastElement.querySelector('.toast-body').innerHTML = `<i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>${message}`;
-        
-        toast.show();
-        
-        setTimeout(() => {
-            toast.hide();
-        }, 3000);
-    }
-    
-    document.addEventListener('DOMContentLoaded', function() {
-        const serialInputs = document.querySelectorAll('.serial-input');
-        
-        serialInputs.forEach(input => {
-            input.addEventListener('paste', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                showToast('warning', 'Paste is disabled - please type the serial manually');
-                return false;
-            });
-            
-            input.addEventListener('copy', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                showToast('warning', 'Copy is disabled');
-                return false;
-            });
-            
-            input.addEventListener('cut', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                showToast('warning', 'Cut is disabled');
-                return false;
-            });
-            
-            input.addEventListener('drop', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                showToast('warning', 'Drop is disabled - please type manually');
-                return false;
-            });
-            
-            input.addEventListener('contextmenu', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                showToast('warning', 'Right-click menu is disabled');
-                return false;
-            });
-            
-            input.addEventListener('mousedown', function(e) {
-                if (e.detail > 2) {
-                    e.preventDefault();
-                    return false;
-                }
-            });
-            
-            const expected = input.getAttribute('data-expected');
-            
-            input.addEventListener('input', function() {
-                const entered = this.value.trim();
-                
-                if (entered === expected) {
-                    this.style.borderColor = '#28a745';
-                    this.style.boxShadow = '0 0 0 0.2rem rgba(40, 167, 69, 0.25)';
-                } else if (entered && entered !== expected) {
-                    this.style.borderColor = '#dc3545';
-                    this.style.boxShadow = '0 0 0 0.2rem rgba(220, 53, 69, 0.25)';
-                } else {
-                    this.style.borderColor = '#e2e8f0';
-                    this.style.boxShadow = '';
-                }
-            });
-            
-            if (input.value.trim()) {
-                input.dispatchEvent(new Event('input'));
-            }
-        });
-        
-        const form = document.querySelector('form');
-        if (form) {
-            form.addEventListener('submit', function(e) {
-                let allFilled = true;
-                const emptyFields = [];
-                
-                serialInputs.forEach((input, index) => {
-                    if (!input.value.trim()) {
-                        allFilled = false;
-                        emptyFields.push(index + 1);
-                    }
-                });
-                
-                if (!allFilled) {
-                    e.preventDefault();
-                    showToast('warning', `Please enter serial numbers for items: ${emptyFields.join(', ')}`);
-                    return false;
-                }
-                
-                return true;
-            });
-        }
-    });
-</script>
 
 <style>
-    .stat-icon {
-        width: 60px;
-        height: 60px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+    .scan-section {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 16px;
+        padding: 5px;
     }
     
-    .bg-opacity-10 {
-        --bs-bg-opacity: 0.1;
+    #scanInput {
+        font-family: 'Courier New', monospace;
+        font-size: 16px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
     }
     
-    .card {
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-        border-radius: 12px;
-        overflow: hidden;
+    #scanInput:focus {
+        border-color: #E04D00;
+        box-shadow: 0 0 0 0.2rem rgba(224, 77, 0, 0.25);
     }
     
-    .card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(0,0,0,0.08) !important;
+    .verified-item {
+        animation: fadeIn 0.3s ease;
     }
     
-    .table td {
-        vertical-align: middle;
-    }
-    
-    .table th {
-        background-color: #f8fafc;
-        font-weight: 600;
-        color: #1e293b;
-        border-bottom: 1px solid #e2e8f0;
-    }
-    
-    code {
-        background-color: #f8fafc;
-        padding: 0.4rem 0.8rem;
-        border-radius: 8px;
-        font-size: 0.9rem;
-        font-family: 'JetBrains Mono', monospace;
-        color: #1e293b;
-        border: 1px solid #e2e8f0;
-    }
-    
-    .badge {
-        font-weight: 500;
-        border-radius: 20px;
-    }
-    
-    .btn {
-        transition: all 0.2s;
-        border-radius: 8px;
-    }
-    
-    .btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
     
     .btn-primary {
@@ -368,56 +257,285 @@
         border-color: #c44500;
     }
     
-    .btn-outline-secondary {
-        border-color: #e2e8f0;
-        color: #64748b;
+    .table td {
+        vertical-align: middle;
     }
     
-    .btn-outline-secondary:hover {
-        background-color: #f8fafc;
-        color: #1e293b;
-        border-color: #94a3b8;
+    code {
+        background-color: #f8f9fa;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
     }
     
-    .serial-input {
-        border-radius: 8px;
-        border: 1px solid #e2e8f0;
-        padding: 0.6rem 1rem;
-        font-family: 'JetBrains Mono', monospace;
-        -webkit-user-select: none;
-        -moz-user-select: none;
-        -ms-user-select: none;
-        user-select: none;
+    .expected-asset {
+        background-color: #e7f1ff;
+        color: #0d6efd;
+        font-weight: 600;
     }
     
-    .serial-input:focus {
-        border-color: #E04D00;
-        box-shadow: 0 0 0 0.2rem rgba(224, 77, 0, 0.25);
+    .entered-asset {
+        font-size: 13px;
+        font-weight: bold;
+        color: #28a745;
+        background-color: #d4edda;
     }
     
-    .toast {
-        border-radius: 12px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    .progress {
+        border-radius: 10px;
+        overflow: hidden;
     }
     
-    .toast-body {
-        display: flex;
-        align-items: center;
+    .progress-bar {
+        transition: width 0.3s ease;
+    }
+    
+    .alert-sm {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
     }
     
     @media (max-width: 768px) {
-        .d-flex.gap-2 {
-            flex-wrap: wrap;
+        .expected-asset, .entered-asset {
+            font-size: 10px;
         }
-        
-        .btn {
-            width: 100%;
-        }
-        
-        code {
-            font-size: 0.8rem;
-            padding: 0.2rem 0.4rem;
+        .table td, .table th {
+            padding: 0.5rem;
         }
     }
 </style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const scanInput = document.getElementById('scanInput');
+        const scanBtn = document.getElementById('scanBtn');
+        const scanFeedback = document.getElementById('scanFeedback');
+        const pendingTableBody = document.getElementById('pendingTableBody');
+        const verifiedTableBody = document.getElementById('verifiedTableBody');
+        const progressBar = document.getElementById('progressBar');
+        const progressBadge = document.getElementById('progressBadge');
+        const submitBtn = document.getElementById('submitBtn');
+        const assetForm = document.getElementById('assetForm');
+        const assetInputsContainer = document.getElementById('assetInputsContainer');
+        
+        let verifiedCount = {{ verified_items|length }};
+        let totalItems = {{ total_items }};
+        
+        function updateProgress() {
+            const percentage = totalItems > 0 ? (verifiedCount / totalItems * 100).toFixed(0) : 0;
+            progressBar.style.width = percentage + '%';
+            progressBar.textContent = percentage + '%';
+            progressBadge.textContent = percentage + '%';
+            
+            // Update submit button
+            if (verifiedCount > 0) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<i class="bi bi-check-circle"></i> Submit ${verifiedCount} Verified Asset Number(s)`;
+            } else {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = `<i class="bi bi-check-circle"></i> Submit Verified Asset Numbers`;
+            }
+            
+            // Update hidden inputs
+            updateHiddenInputs();
+        }
+        
+        function updateHiddenInputs() {
+            // Clear container
+            assetInputsContainer.innerHTML = '';
+            
+            // Add hidden inputs for all verified items
+            const verifiedRows = verifiedTableBody.querySelectorAll('tr[data-verified="true"]');
+            verifiedRows.forEach(row => {
+                const itemId = row.getAttribute('data-item-id');
+                const enteredAsset = row.querySelector('.entered-asset').textContent;
+                
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = `asset_${itemId}`;
+                input.value = enteredAsset;
+                assetInputsContainer.appendChild(input);
+            });
+        }
+        
+        function showFeedback(type, message) {
+            const alertClass = type === 'success' ? 'success' : type === 'error' ? 'danger' : 'warning';
+            const icon = type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle';
+            
+            scanFeedback.innerHTML = `
+                <div class="alert alert-${alertClass} alert-dismissible fade show py-2 mb-0">
+                    <i class="bi bi-${icon} me-2"></i>
+                    ${message}
+                    <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            setTimeout(() => {
+                const alert = scanFeedback.querySelector('.alert');
+                if (alert) {
+                    alert.remove();
+                }
+            }, 4000);
+        }
+        
+        function verifyAssetNumber(enteredAsset) {
+            if (!enteredAsset.trim()) {
+                showFeedback('warning', '⚠️ Please enter or scan an Asset Number');
+                scanInput.focus();
+                return;
+            }
+            
+            enteredAsset = enteredAsset.trim().toUpperCase();
+            
+            // Find pending item that matches the entered asset number
+            const pendingRows = pendingTableBody.querySelectorAll('tr[id^="pendingRow_"]');
+            let matchedItem = null;
+            let matchedAsset = null;
+            
+            for (const row of pendingRows) {
+                const expectedAsset = row.getAttribute('data-expected-asset');
+                if (expectedAsset === enteredAsset) {
+                    matchedItem = row;
+                    matchedAsset = expectedAsset;
+                    break;
+                }
+            }
+            
+            if (!matchedItem) {
+                showFeedback('error', `❌ Asset Number "${enteredAsset}" does not match any pending hardware. Please check the device and try again.`);
+                scanInput.value = '';
+                scanInput.focus();
+                return;
+            }
+            
+            // Get item details
+            const itemId = matchedItem.getAttribute('data-item-id');
+            const hardwareType = matchedItem.getAttribute('data-hardware-type');
+            
+            // Move to verified section
+            matchedItem.remove();
+            
+            // Check if no pending items left
+            if (pendingTableBody.querySelectorAll('tr[id^="pendingRow_"]').length === 0) {
+                const noPendingRow = document.createElement('tr');
+                noPendingRow.id = 'noPendingRow';
+                noPendingRow.innerHTML = `
+                    <td colspan="4" class="text-center py-3 text-success">
+                        <i class="bi bi-check-circle"></i> All hardware verified!
+                    </td>
+                `;
+                pendingTableBody.appendChild(noPendingRow);
+            }
+            
+            // Get row number for verified table
+            const rowNumber = verifiedTableBody.querySelectorAll('tr').length + 1;
+            
+            // Add to verified table
+            const newRow = document.createElement('tr');
+            newRow.setAttribute('data-item-id', itemId);
+            newRow.setAttribute('data-verified', 'true');
+            newRow.className = 'verified-item';
+            newRow.innerHTML = `
+                <td>${rowNumber}</td>
+                <td>${hardwareType}</td>
+                <td><code class="entered-asset">${enteredAsset}</code></td>
+                <td>
+                    <span class="badge bg-success">
+                        <i class="bi bi-check-circle"></i> Verified
+                    </span>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-outline-danger remove-verified" data-item-id="${itemId}">
+                        <i class="bi bi-arrow-return-left"></i> Undo
+                    </button>
+                </td>
+            `;
+            
+            verifiedTableBody.appendChild(newRow);
+            
+            // Add undo event listener
+            newRow.querySelector('.remove-verified').addEventListener('click', function() {
+                undoVerification(itemId, hardwareType, enteredAsset);
+            });
+            
+            verifiedCount++;
+            updateProgress();
+            showFeedback('success', `✅ ${hardwareType} verified successfully with Asset Number: ${enteredAsset}`);
+            scanInput.value = '';
+            scanInput.focus();
+        }
+        
+        function undoVerification(itemId, hardwareType, enteredAsset) {
+            // Remove from verified table
+            const verifiedRow = verifiedTableBody.querySelector(`tr[data-item-id="${itemId}"]`);
+            if (verifiedRow) {
+                verifiedRow.remove();
+            }
+            
+            // Remove "no pending" row if exists
+            const noPendingRow = document.getElementById('noPendingRow');
+            if (noPendingRow) {
+                noPendingRow.remove();
+            }
+            
+            // Get current pending count for row number
+            const pendingRows = pendingTableBody.querySelectorAll('tr[id^="pendingRow_"]');
+            const rowNumber = pendingRows.length + 1;
+            
+            // Re-create pending row
+            const pendingRow = document.createElement('tr');
+            pendingRow.id = `pendingRow_${itemId}`;
+            pendingRow.setAttribute('data-item-id', itemId);
+            pendingRow.setAttribute('data-hardware-id', '');
+            pendingRow.setAttribute('data-hardware-type', hardwareType);
+            pendingRow.setAttribute('data-expected-asset', enteredAsset);
+            pendingRow.innerHTML = `
+                <td>${rowNumber}</td>
+                <td>${hardwareType}</td>
+                <td><code class="expected-asset">${enteredAsset}</code></td>
+                <td>
+                    <span class="badge bg-warning">
+                        <i class="bi bi-clock"></i> Awaiting Scan
+                    </span>
+                </td>
+            `;
+            
+            pendingTableBody.appendChild(pendingRow);
+            
+            verifiedCount--;
+            updateProgress();
+            showFeedback('info', `↩️ ${hardwareType} moved back to pending list`);
+            scanInput.focus();
+        }
+        
+        // Event listeners
+        scanBtn.addEventListener('click', function() {
+            verifyAssetNumber(scanInput.value);
+        });
+        
+        scanInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                verifyAssetNumber(scanInput.value);
+            }
+        });
+        
+        // Add undo event listeners to existing verified items
+        document.querySelectorAll('.remove-verified').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const row = this.closest('tr');
+                const itemId = row.getAttribute('data-item-id');
+                const hardwareType = row.cells[1].textContent;
+                const enteredAsset = row.querySelector('.entered-asset').textContent;
+                undoVerification(itemId, hardwareType, enteredAsset);
+            });
+        });
+        
+        // Auto-focus on scan input
+        scanInput.focus();
+        
+        updateProgress();
+    });
+</script>
 {% endblock %}
