@@ -3703,6 +3703,7 @@ def view_my_assignments(request):
     }
     return render(request, 'employee/view_my_assignments.html', context)
 
+
 @login_required
 def my_assignment_details(request, assignment_id):
     if request.user.user_type != 'employee':
@@ -3712,18 +3713,24 @@ def my_assignment_details(request, assignment_id):
     items = HardwareAssignmentItem.objects.filter(assignment=assignment).select_related('hardware__hardware_type')
     
     for item in items:
-        item.has_serial_entry = hasattr(item, 'serial_entry')
-        if item.has_serial_entry:
-            item.serial_number = item.serial_entry.serial_number
-            item.is_verified = item.serial_entry.verified
+        # Get asset number (primary) and serial number (reference)
+        item.asset_number = item.hardware.asset_number if item.hardware.asset_number else 'N/A'
+        item.serial_number_display = item.hardware.serial_number
+        
+        # FIX: Use asset_entry instead of serial_entry
+        item.has_asset_entry = hasattr(item, 'asset_entry')
+        if item.has_asset_entry:
+            # The entered value is the Asset Number (stored in asset_entry)
+            item.entered_asset = item.asset_entry.entered_asset_number
+            item.is_verified = item.asset_entry.verified
         else:
-            item.serial_number = None
+            item.entered_asset = None
             item.is_verified = False
     
     total_items = items.count()
-    pending_count = sum(1 for item in items if not hasattr(item, 'serial_entry'))
+    pending_count = sum(1 for item in items if not hasattr(item, 'asset_entry'))
     entered_count = total_items - pending_count
-    verified_count = sum(1 for item in items if hasattr(item, 'serial_entry') and item.serial_entry.verified)
+    verified_count = sum(1 for item in items if hasattr(item, 'asset_entry') and item.asset_entry.verified)
     
     context = {
         'assignment': assignment,
