@@ -12,15 +12,41 @@
                     Assignment ID: {{ assignment.assignment_id|slice:"0:8" }}...
                 </p>
             </div>
-<div class="d-flex justify-content-end gap-2 mb-3">
-    <a href="{% url 'export_assignment_excel' assignment.id %}" class="btn btn-success">
-        <i class="bi bi-file-excel me-2"></i>Export to Excel
-    </a>
-    <a href="{% url 'view_my_assignments' %}" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left me-2"></i>Back to Assignments
-    </a>
-</div>
+            <div class="d-flex justify-content-end gap-2">
+                <!-- Export button - visible only when all items are verified -->
+                {% if verified_count == total_items and total_items > 0 %}
+                    <a href="{% url 'export_assignment_excel' assignment.id %}" class="btn btn-success">
+                        <i class="bi bi-file-excel me-2"></i>Export to Excel
+                    </a>
+                {% else %}
+                    <button class="btn btn-secondary" disabled title="All hardware must be verified before exporting">
+                        <i class="bi bi-file-excel me-2"></i>Export to Excel
+                        <span class="badge bg-warning text-dark ms-1">Locked</span>
+                    </button>
+                {% endif %}
+                <a href="{% url 'view_my_assignments' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>Back to Assignments
+                </a>
+            </div>
         </div>
+        <!-- Status message for export -->
+        {% if verified_count < total_items and total_items > 0 %}
+            <div class="alert alert-warning mt-3 py-2">
+                <i class="bi bi-info-circle me-1"></i>
+                <small>Export to Excel is available after all hardware items are verified. 
+                ({{ verified_count }}/{{ total_items }} verified)</small>
+            </div>
+        {% elif total_items == 0 %}
+            <div class="alert alert-info mt-3 py-2">
+                <i class="bi bi-info-circle me-1"></i>
+                <small>No hardware items to export.</small>
+            </div>
+        {% else %}
+            <div class="alert alert-success mt-3 py-2">
+                <i class="bi bi-check-circle me-1"></i>
+                <small>All hardware items verified! Export to Excel is now available.</small>
+            </div>
+        {% endif %}
     </div>
 </div>
 
@@ -122,8 +148,9 @@
                             <tr>
                                 <th>#</th>
                                 <th>Hardware Type</th>
-                                <th>Model</th>
-                                <th>Entered Serial</th>
+                                <th>Asset Number</th>
+                                <th>Serial Number</th>
+                                <th>Entered Asset</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
@@ -133,25 +160,28 @@
                             <tr>
                                 <td>{{ forloop.counter }}</td>
                                 <td>{{ item.hardware.hardware_type.name }}</td>
-                                <td>{{ item.hardware.model_name }}</td>
                                 <td>
-                                    {% if item.has_serial_entry %}
-                                        <strong>{{ item.serial_number }}</strong>
+                                    <code class="asset-number">{{ item.asset_number }}</code>
+                                </td>
+                                <td>
+                                    <code class="serial-number">{{ item.serial_number_display }}</code>
+                                </td>
+                                <td>
+                                    {% if item.entered_asset %}
+                                        <strong><code class="text-success">{{ item.entered_asset }}</code></strong>
                                     {% else %}
-                                        <span class="text-muted">Not entered</span>
+                                        <span class="text-muted">— Not entered —</span>
                                     {% endif %}
                                 </td>
                                 <td>
-                                    {% if item.has_serial_entry %}
-                                        {% if item.is_verified %}
-                                            <span class="badge text-white" style="background-color: #444444;">
-                                                <i class="bi bi-check-circle"></i> Verified
-                                            </span>
-                                        {% else %}
-                                            <span class="badge text-white" style="background-color: #666666;">
-                                                <i class="bi bi-clock"></i> Pending
-                                            </span>
-                                        {% endif %}
+                                    {% if item.is_verified %}
+                                        <span class="badge text-white" style="background-color: #444444;">
+                                            <i class="bi bi-check-circle"></i> Verified
+                                        </span>
+                                    {% elif item.entered_asset %}
+                                        <span class="badge text-white" style="background-color: #666666;">
+                                            <i class="bi bi-clock"></i> Pending
+                                        </span>
                                     {% else %}
                                         <span class="badge text-white" style="background-color: #888888;">
                                             <i class="bi bi-exclamation-circle"></i> Not Entered
@@ -160,7 +190,7 @@
                                 </td>
                                 <td>
                                     {% if not item.is_verified %}
-                                        {% if item.has_serial_entry %}
+                                        {% if item.entered_asset %}
                                         <a href="{% url 'edit_serial_numbers' assignment.id %}" 
                                            class="btn btn-sm text-white" style="background-color: #666666;">
                                             <i class="bi bi-pencil"></i> Edit
@@ -168,7 +198,7 @@
                                         {% else %}
                                         <a href="{% url 'enter_serial_numbers' assignment.id %}" 
                                            class="btn btn-sm text-white" style="background-color: #E04D00;">
-                                            <i class="bi bi-upc-scan"></i> Enter
+                                            <i class="bi bi-upc-scan"></i> Enter Asset
                                         </a>
                                         {% endif %}
                                     {% else %}
@@ -180,7 +210,7 @@
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="8" class="text-center py-4">
+                                <td colspan="7" class="text-center py-4">
                                     <i class="bi bi-laptop display-4 text-muted"></i>
                                     <h4 class="mt-3">No Hardware Items</h4>
                                     <p class="text-muted">No hardware items assigned</p>
@@ -201,7 +231,7 @@
                                 <i class="bi bi-info-circle" style="color: #E04D00;"></i> 
                                 <strong>Status:</strong> 
                                 {{ total_items }} total items | 
-                                {{ pending }} pending serial entries
+                                {{ pending }} pending asset entries
                             </div>
                             {% endwith %}
                             {% endwith %}
@@ -211,9 +241,9 @@
                                class="btn text-white" style="background-color: #E04D00;">
                                 <i class="bi bi-upc-scan"></i> 
                                 {% if pending_count > 0 %}
-                                    Enter Serial Numbers
+                                    Enter Asset Numbers
                                 {% else %}
-                                    Update Serial Numbers
+                                    Update Asset Numbers
                                 {% endif %}
                             </a>
                         </div>
@@ -342,6 +372,19 @@
                     {% endif %}
                 </div>
                 
+                <div class="alert" style="background-color: #f5f5f5; border: 1px solid #ddd;">
+                    <h6><i class="bi bi-check-circle" style="color: #E04D00;"></i> Verification Status:</h6>
+                    <p class="mb-0">
+                        {% if verified_count == total_items and total_items > 0 %}
+                            <span class="text-success">✓ All hardware verified!</span>
+                        {% elif verified_count > 0 %}
+                            <span>{{ verified_count }} item(s) verified</span>
+                        {% else %}
+                            <span>No items verified yet</span>
+                        {% endif %}
+                    </p>
+                </div>
+                
                 {% if assignment.exam_city %}
                 <div class="alert" style="background-color: #f5f5f5; border: 1px solid #ddd;">
                     <h6><i class="bi bi-geo-alt-fill" style="color: #E04D00;"></i> Important:</h6>
@@ -360,24 +403,46 @@
                 </h4>
             </div>
             <div class="card-body">
-                <h6>How to Enter Serial Numbers:</h6>
+                <h6>How to Enter Asset Numbers:</h6>
                 <ol class="mb-3">
-                    <li>Locate the serial number on each physical device</li>
-                    <li>Click "Enter Serial" for each item</li>
-                    <li>Type the exact serial number</li>
+                    <li>Locate the Asset Number sticker on each physical device</li>
+                    <li>Click "Enter Asset" for each item</li>
+                    <li>Type or scan the exact Asset Number from the device</li>
                     <li>Submit for manager verification</li>
                 </ol>
                 
                 <div class="alert" style="background-color: #f5f5f5; border: 1px solid #ddd;">
                     <h6><i class="bi bi-exclamation-circle" style="color: #E04D00;"></i> Important Notes:</h6>
                     <ul class="mb-0">
-                        <li>Serial numbers must be accurate</li>
-                        <li>Verified serials cannot be edited</li>
-                        <li>Contact manager for corrections</li>
+                        <li>Asset Numbers must be accurate and match the physical device</li>
+                        <li>Asset Number is the primary identifier for verification</li>
+                        <li>Serial Number is shown for reference only</li>
+                        <li>Verified Asset Numbers cannot be edited by employees</li>
+                        <li>Contact your manager for corrections if needed</li>
+                        <li>Keep hardware safe and in good condition</li>
                         {% if assignment.exam_city %}
                         <li><strong>Bring hardware to <span style="color: #E04D00;">{{ assignment.exam_city }}</span> for exam</strong></li>
                         {% endif %}
-                        <li>Return hardware before due date</li>
+                        <li>Return all hardware before the due date</li>
+                    </ul>
+                </div>
+                
+                <!-- Export Info -->
+                <div class="alert mt-3" style="background-color: #f0f0f0; border: 1px solid #ddd;">
+                    <h6><i class="bi bi-file-excel" style="color: #E04D00;"></i> Export Information:</h6>
+                    <ul class="mb-0">
+                        <li>Export to Excel is available <strong>only after all hardware items are verified</strong></li>
+                        <li>Export includes all hardware details, asset numbers, and verification status</li>
+                        <li>Excel file includes summary statistics and asset number summary</li>
+                        <li>Current status: 
+                            {% if verified_count == total_items and total_items > 0 %}
+                                <span class="text-success">✓ All verified - Export available</span>
+                            {% elif total_items > 0 %}
+                                <span class="text-warning">{{ verified_count }}/{{ total_items }} verified - Export locked</span>
+                            {% else %}
+                                <span class="text-muted">No items to export</span>
+                            {% endif %}
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -397,6 +462,17 @@
         border-radius: 3px;
         font-size: 0.9em;
         color: #000000;
+    }
+    
+    .asset-number {
+        background-color: #e7f1ff;
+        color: #0d6efd;
+        font-weight: 600;
+    }
+    
+    .serial-number {
+        background-color: #f8f9fa;
+        color: #6c757d;
     }
     
     .progress {
@@ -471,6 +547,11 @@
         background-color: #555555 !important;
     }
     
+    .btn-secondary:disabled {
+        opacity: 0.65;
+        cursor: not-allowed;
+    }
+    
     .card-header {
         border-bottom: none;
     }
@@ -507,6 +588,15 @@
     .btn-primary:hover {
         background-color: #c44500;
         border-color: #c44500;
+    }
+    
+    @media (max-width: 768px) {
+        .asset-number, .serial-number {
+            font-size: 10px;
+        }
+        .table td, .table th {
+            padding: 0.5rem;
+        }
     }
 </style>
 {% endblock %}
