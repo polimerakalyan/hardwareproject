@@ -1907,7 +1907,6 @@ import openpyxl
 import pandas as pd
 from django.http import HttpResponse
 from datetime import datetime
-
 @login_required
 def add_hardware(request):
     if request.user.user_type != 'manager':
@@ -1928,8 +1927,8 @@ def add_hardware(request):
                 # Read Excel file
                 df = pd.read_excel(excel_file)
                 
-                # Expected columns - updated without specifications and purchase_date
-                expected_columns = ['hardware_type', 'serial_number', 'model_name', 'brand']
+                # Expected columns - hardware_type first, then asset_number, then serial_number
+                expected_columns = ['hardware_type', 'asset_number', 'serial_number']
                 
                 # Validate columns
                 missing_columns = [col for col in expected_columns if col not in df.columns]
@@ -1944,13 +1943,12 @@ def add_hardware(request):
                 for index, row in df.iterrows():
                     try:
                         hardware_type_name = str(row['hardware_type']).strip()
+                        asset_number = str(row['asset_number']).strip()
                         serial_number = str(row['serial_number']).strip()
-                        model_name = str(row['model_name']).strip()
-                        brand = str(row['brand']).strip() if pd.notna(row['brand']) else ''
                         
                         # Validate required fields
-                        if not hardware_type_name or not serial_number or not model_name:
-                            errors.append(f"Row {index + 2}: Missing required fields (hardware_type, serial_number, model_name)")
+                        if not hardware_type_name or not asset_number or not serial_number:
+                            errors.append(f"Row {index + 2}: Missing required fields (hardware_type, asset_number, serial_number)")
                             error_count += 1
                             continue
                         
@@ -1958,7 +1956,6 @@ def add_hardware(request):
                         try:
                             hardware_type = HardwareType.objects.get(name__iexact=hardware_type_name)
                         except HardwareType.DoesNotExist:
-                            # Try to find by ID if it's a number
                             if hardware_type_name.isdigit():
                                 try:
                                     hardware_type = HardwareType.objects.get(id=int(hardware_type_name))
@@ -1971,6 +1968,12 @@ def add_hardware(request):
                                 error_count += 1
                                 continue
                         
+                        # Check if asset number already exists
+                        if Hardware.objects.filter(asset_number=asset_number).exists():
+                            errors.append(f"Row {index + 2}: Asset number '{asset_number}' already exists")
+                            error_count += 1
+                            continue
+                        
                         # Check for duplicate serial number
                         if Hardware.objects.filter(serial_number=serial_number).exists():
                             errors.append(f"Row {index + 2}: Serial number '{serial_number}' already exists")
@@ -1980,9 +1983,8 @@ def add_hardware(request):
                         # Create hardware
                         Hardware.objects.create(
                             hardware_type=hardware_type,
+                            asset_number=asset_number,
                             serial_number=serial_number,
-                            model_name=model_name,
-                            brand=brand,
                             status='available',
                             created_by=request.user
                         )
@@ -2010,9 +2012,25 @@ def add_hardware(request):
         # Single hardware addition
         else:
             hardware_type_id = request.POST.get('hardware_type')
+            asset_number = request.POST.get('asset_number')
             serial_number = request.POST.get('serial_number')
-            model_name = request.POST.get('model_name')
-            brand = request.POST.get('brand')
+            
+            # Validate required fields
+            if not hardware_type_id:
+                messages.error(request, 'Hardware type is required!')
+                return redirect('add_hardware')
+            
+            if not asset_number:
+                messages.error(request, 'Asset number is required!')
+                return redirect('add_hardware')
+            
+            if not serial_number:
+                messages.error(request, 'Serial number is required!')
+                return redirect('add_hardware')
+            
+            if Hardware.objects.filter(asset_number=asset_number).exists():
+                messages.error(request, 'Asset number already exists!')
+                return redirect('add_hardware')
             
             if Hardware.objects.filter(serial_number=serial_number).exists():
                 messages.error(request, 'Serial number already exists!')
@@ -2026,18 +2044,20 @@ def add_hardware(request):
             
             hardware = Hardware.objects.create(
                 hardware_type=hardware_type,
+                asset_number=asset_number,
                 serial_number=serial_number,
-                model_name=model_name,
-                brand=brand,
                 status='available',
                 created_by=request.user
             )
             
-            messages.success(request, f'{hardware_type.name} added successfully!')
+            messages.success(request, f'{hardware_type.name} added successfully! Asset Number: {asset_number}')
             return redirect('manage_hardware')
     
     context = {'hardware_types': hardware_types}
     return render(request, 'manager/add_hardware.html', context)
+
+
+
 @login_required
 def download_hardware_template(request):
     """Download Excel template for bulk hardware import"""
