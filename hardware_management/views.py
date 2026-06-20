@@ -3923,6 +3923,7 @@ def export_assignment_excel(request, assignment_id):
     return response
 # ============== EMPLOYEE SERIAL NUMBER ENTRY ==============
 
+
 @login_required
 def enter_serial_numbers(request, assignment_id):
     if request.user.user_type != 'employee':
@@ -3936,22 +3937,39 @@ def enter_serial_numbers(request, assignment_id):
     
     items = HardwareAssignmentItem.objects.filter(assignment=assignment).select_related('hardware__hardware_type')
     
+    verified_items = []
+    pending_items = []
+    
+    for item in items:
+        item.asset_number = item.hardware.asset_number if item.hardware.asset_number else 'N/A'
+        item.serial_number = item.hardware.serial_number
+        
+        # FIX: Use 'asset_entry' related_name
+        if hasattr(item, 'asset_entry') and item.asset_entry.entered_asset_number:
+            item.existing_asset = item.asset_entry.entered_asset_number
+            verified_items.append(item)
+        else:
+            item.existing_asset = ''
+            pending_items.append(item)
+    
     if request.method == 'POST':
         success_count = 0
         error_count = 0
         
         for item in items:
-            serial_number = request.POST.get(f'serial_{item.id}')
-            if serial_number and serial_number.strip():
-                if hasattr(item, 'serial_entry'):
-                    serial_entry = item.serial_entry
-                    serial_entry.serial_number = serial_number.strip()
-                    serial_entry.save()
+            asset_number = request.POST.get(f'asset_{item.id}')
+            if asset_number and asset_number.strip():
+                # FIX: Use 'asset_entry' related_name
+                if hasattr(item, 'asset_entry'):
+                    asset_entry = item.asset_entry
+                    asset_entry.entered_asset_number = asset_number.strip()
+                    asset_entry.entered_by = request.user
+                    asset_entry.save()
                     success_count += 1
                 else:
-                    HardwareSerialEntry.objects.create(
-                        assignment_item=item,
-                        serial_number=serial_number.strip(),
+                    HardwareAssetEntry.objects.create(
+                        hardware_item=item,  # Using the field name 'hardware_item'
+                        entered_asset_number=asset_number.strip(),
                         entered_by=request.user
                     )
                     success_count += 1
@@ -3959,21 +3977,19 @@ def enter_serial_numbers(request, assignment_id):
                 error_count += 1
         
         if success_count > 0:
-            messages.success(request, f'Successfully submitted {success_count} serial number(s)!')
+            messages.success(request, f'Successfully submitted {success_count} asset number(s)!')
         if error_count > 0:
-            messages.warning(request, f'{error_count} item(s) were not submitted (empty serial number)')
+            messages.warning(request, f'{error_count} item(s) were not submitted (empty asset number)')
         
         return redirect('my_assignment_details', assignment_id=assignment_id)
-    
-    for item in items:
-        if hasattr(item, 'serial_entry'):
-            item.existing_serial = item.serial_entry.serial_number
-        else:
-            item.existing_serial = ''
     
     context = {
         'assignment': assignment,
         'items': items,
+        'verified_items': verified_items,
+        'pending_items': pending_items,
+        'total_items': items.count(),
+        'editing': bool(verified_items)
     }
     return render(request, 'employee/enter_serial_numbers.html', context)
 
