@@ -4,15 +4,24 @@
 {% block content %}
 <div class="row mb-4">
     <div class="col-md-12">
-        <h2>Create Hardware Assignment</h2>
-        <p class="text-muted">Assign multiple hardware items to employees</p>
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2><i class="bi bi-clipboard-check"></i> Create Hardware Assignment</h2>
+                <p class="text-muted">Assign hardware items to employees using Asset Number</p>
+            </div>
+            <div>
+                <a href="{% url 'view_assignments' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Assignments
+                </a>
+            </div>
+        </div>
     </div>
 </div>
 
 <div class="row">
     <div class="col-md-12">
-        <div class="card">
-            <div class="card-header bg-success text-white">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-primary text-white">
                 <h4 class="mb-0">
                     <i class="bi bi-clipboard-check"></i> Assignment Details
                 </h4>
@@ -80,10 +89,10 @@
                     <div class="row mb-4">
                         <div class="col-md-12">
                             <h5>Add Hardware Items</h5>
-                            <p class="text-muted">Select hardware type then enter multiple serial numbers</p>
+                            <p class="text-muted">Select hardware type then enter Asset Number</p>
                             
                             <!-- Hardware Type Selection -->
-                            <div class="card mb-3">
+                            <div class="card mb-3 bg-light">
                                 <div class="card-body">
                                     <div class="row">
                                         <div class="col-md-4">
@@ -98,17 +107,19 @@
                                             </select>
                                         </div>
                                         <div class="col-md-8">
-                                            <label for="serialInput" class="form-label fw-bold">Serial Numbers *</label>
-                                            <input type="text" 
-                                                   class="form-control" 
-                                                   id="serialInput" 
-                                                   placeholder="Enter serial number and press Enter or comma"
-                                                   autocomplete="off">
-                                            <small class="text-muted">
-                                                <span id="availableCount"></span>
-                                                Type serial number and press Enter or comma (,) to add
-                                            </small>
-                                            <datalist id="serialSuggestions"></datalist>
+                                            <label for="assetInput" class="form-label fw-bold">Asset Number *</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-white">
+                                                    <i class="bi bi-upc-scan"></i>
+                                                </span>
+                                                <input type="text" 
+                                                       class="form-control" 
+                                                       id="assetInput" 
+                                                       placeholder="Enter Asset Number"
+                                                       autocomplete="off">
+                                            </div>
+                                            <small class="text-muted" id="availableCount"></small>
+                                            <datalist id="assetSuggestions"></datalist>
                                         </div>
                                     </div>
                                 </div>
@@ -118,11 +129,11 @@
                             <div class="card mb-3">
                                 <div class="card-body">
                                     <h6 class="card-title mb-3">
-                                        <i class="bi bi-tags"></i> Added Serial Numbers
+                                        <i class="bi bi-tags"></i> Added Hardware Items
                                         <span id="itemCount" class="badge bg-secondary ms-2">0</span>
                                     </h6>
                                     <div id="tagsContainer" class="d-flex flex-wrap gap-2" style="min-height: 80px;">
-                                        <div class="text-muted">No serial numbers added yet. Select hardware type and enter serial numbers above.</div>
+                                        <div class="text-muted">No hardware items added yet. Select hardware type and enter Asset Number above.</div>
                                     </div>
                                 </div>
                             </div>
@@ -157,12 +168,14 @@
                         </div>
                     </div>
                     
-                    <button type="submit" class="btn btn-outline-info" id="submitBtn" disabled>
-                        <i class="bi bi-clipboard-check"></i> Create Assignment
-                    </button>
-                    <a href="{% url 'view_assignments' %}" class="btn btn-outline-secondary">
-                        <i class="bi bi-arrow-left"></i> Back to Assignments
-                    </a>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
+                            <i class="bi bi-clipboard-check"></i> Create Assignment
+                        </button>
+                        <a href="{% url 'view_assignments' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Cancel
+                        </a>
+                    </div>
                 </form>
             </div>
         </div>
@@ -170,16 +183,17 @@
 </div>
 
 <script>
-    // Inventory data from backend
+    // Inventory data from backend with asset numbers
     const inventoryData = {
         {% for hw_type in hardware_types %}
         '{{ hw_type.id }}': {
             name: '{{ hw_type.name }}',
-            serials: [
-                {% for hardware in hw_type.hardware_set.all %}
-                {% if hardware.status == 'available' and hardware.created_by == request.user %}
-                '{{ hardware.serial_number|escapejs }}'{% if not forloop.last %},{% endif %}
-                {% endif %}
+            items: [
+                {% for hardware in hw_type.hardware_list %}
+                {
+                    asset_number: '{{ hardware.asset_number|escapejs }}',
+                    serial_number: '{{ hardware.serial_number|escapejs }}'
+                }{% if not forloop.last %},{% endif %}
                 {% endfor %}
             ]
         }{% if not forloop.last %},{% endif %}
@@ -190,10 +204,10 @@
         let hardwareItems = [];
         let currentHardwareTypeId = null;
         let currentHardwareTypeName = null;
-        let availableSerials = [];
+        let availableItems = [];
         
         const hardwareTypeSelect = document.getElementById('hardwareTypeSelect');
-        const serialInput = document.getElementById('serialInput');
+        const assetInput = document.getElementById('assetInput');
         const tagsContainer = document.getElementById('tagsContainer');
         const hardwareSummary = document.getElementById('hardwareSummary');
         const hardwareItemsJson = document.getElementById('hardwareItemsJson');
@@ -201,93 +215,108 @@
         const submitBtn = document.getElementById('submitBtn');
         const availableCountSpan = document.getElementById('availableCount');
         
-        // Update available serials when hardware type changes
-        function updateAvailableSerials() {
+        // Update available items when hardware type changes
+        function updateAvailableItems() {
             if (currentHardwareTypeId && inventoryData[currentHardwareTypeId]) {
-                // Get only serials that are not already added
-                const allSerials = inventoryData[currentHardwareTypeId].serials || [];
-                const addedSerials = hardwareItems.filter(item => item.hardware_type_id === currentHardwareTypeId).map(item => item.serial_number);
-                availableSerials = allSerials.filter(s => !addedSerials.includes(s));
+                // Get items that are not already added
+                const allItems = inventoryData[currentHardwareTypeId].items || [];
+                const addedAssets = hardwareItems
+                    .filter(item => item.hardware_type_id === currentHardwareTypeId)
+                    .map(item => item.asset_number);
                 
-                const count = availableSerials.length;
-                const totalCount = allSerials.length;
-                const usedCount = addedSerials.length;
+                availableItems = allItems.filter(item => 
+                    !addedAssets.includes(item.asset_number)
+                );
                 
-                availableCountSpan.innerHTML = `✓ ${count} available ${currentHardwareTypeName}(s) out of ${totalCount} total. `;
-                if (usedCount > 0) {
-                    availableCountSpan.innerHTML += `<span class="text-info">${usedCount} already added.</span> `;
+                const count = availableItems.length;
+                const totalCount = allItems.length;
+                const usedCount = addedAssets.length;
+                
+                if (count === 0 && totalCount > 0 && usedCount === totalCount) {
+                    availableCountSpan.innerHTML = `<span class="text-success">✓ All ${totalCount} items have been added.</span>`;
+                    assetInput.disabled = true;
+                    assetInput.placeholder = `All ${currentHardwareTypeName}s added`;
+                } else if (count === 0 && totalCount === 0) {
+                    availableCountSpan.innerHTML = `<span class="text-danger">⚠️ No ${currentHardwareTypeName}s available in inventory!</span>`;
+                    assetInput.disabled = true;
+                    assetInput.placeholder = `No ${currentHardwareTypeName}s available`;
+                } else {
+                    availableCountSpan.innerHTML = `<span class="text-info">✓ ${count} available item(s) out of ${totalCount}. ${usedCount} added.</span>`;
+                    assetInput.disabled = false;
+                    assetInput.placeholder = `Enter Asset Number (${count} available)`;
                 }
                 
-                // Update datalist
-                const datalist = document.getElementById('serialSuggestions');
+                // Update datalist suggestions
+                const datalist = document.getElementById('assetSuggestions');
                 datalist.innerHTML = '';
-                availableSerials.forEach(serial => {
+                availableItems.forEach(item => {
                     const option = document.createElement('option');
-                    option.value = serial;
+                    option.value = item.asset_number;
+                    option.textContent = `${item.asset_number}`;
                     datalist.appendChild(option);
                 });
                 
-                if (count === 0) {
-                    if (totalCount === 0) {
-                        availableCountSpan.innerHTML = `<span class="text-danger">⚠️ No ${currentHardwareTypeName}s available in inventory!</span>`;
-                    } else {
-                        availableCountSpan.innerHTML = `<span class="text-success">✓ All ${totalCount} ${currentHardwareTypeName}(s) have been added.</span>`;
-                    }
-                    serialInput.disabled = true;
-                    serialInput.placeholder = `All ${currentHardwareTypeName}s added`;
-                } else {
-                    serialInput.disabled = false;
-                    serialInput.placeholder = `Enter serial number for ${currentHardwareTypeName} (${count} available)`;
-                }
             } else {
-                availableSerials = [];
+                availableItems = [];
                 availableCountSpan.innerHTML = '';
-                serialInput.disabled = true;
-                serialInput.placeholder = 'Select hardware type first';
+                assetInput.disabled = true;
+                assetInput.placeholder = 'Select hardware type first';
             }
         }
         
-        // Validate if serial belongs to selected hardware type and is available
-        function validateSerialNumber(serialNumber) {
-            serialNumber = serialNumber.trim().toUpperCase();
+        // Find hardware item by asset number
+        function findHardwareItem(assetNumber) {
+            assetNumber = assetNumber.trim().toUpperCase();
             
             if (!currentHardwareTypeId) {
                 return { valid: false, message: 'Please select a hardware type first' };
             }
             
-            if (!serialNumber) {
-                return { valid: false, message: 'Please enter a serial number' };
+            if (!assetNumber) {
+                return { valid: false, message: 'Please enter Asset Number' };
             }
             
-            // Check if serial exists in available serials for this hardware type
-            if (!availableSerials.includes(serialNumber)) {
-                const allSerials = inventoryData[currentHardwareTypeId]?.serials || [];
-                if (allSerials.includes(serialNumber)) {
-                    return { valid: false, message: `Serial number ${serialNumber} has already been added` };
-                } else {
-                    return { valid: false, message: `Serial number ${serialNumber} is not available or does not belong to ${currentHardwareTypeName}` };
-                }
+            const allItems = inventoryData[currentHardwareTypeId]?.items || [];
+            
+            // Find by asset number
+            const foundItem = allItems.find(item => 
+                item.asset_number.toUpperCase() === assetNumber
+            );
+            
+            if (!foundItem) {
+                return { valid: false, message: `Asset '${assetNumber}' not found in ${currentHardwareTypeName} inventory` };
             }
             
-            return { valid: true, message: 'Valid serial number' };
+            // Check if already added
+            const isAdded = hardwareItems.some(item => 
+                item.hardware_type_id === currentHardwareTypeId && 
+                item.asset_number === foundItem.asset_number
+            );
+            
+            if (isAdded) {
+                return { valid: false, message: `Asset ${foundItem.asset_number} already added` };
+            }
+            
+            return { valid: true, item: foundItem, message: 'Valid hardware item' };
         }
         
-        // Add serial number to the list
-        function addSerialNumber(serialNumber) {
-            serialNumber = serialNumber.trim().toUpperCase();
-            
-            const validation = validateSerialNumber(serialNumber);
+        // Add hardware item to the list
+        function addHardwareItem(assetNumber) {
+            const validation = findHardwareItem(assetNumber);
             
             if (!validation.valid) {
                 showNotification(validation.message, 'danger');
                 return false;
             }
             
+            const item = validation.item;
+            
             // Add to array
             hardwareItems.push({
                 hardware_type_id: currentHardwareTypeId,
                 hardware_type_name: currentHardwareTypeName,
-                serial_number: serialNumber
+                asset_number: item.asset_number,
+                serial_number: item.serial_number
             });
             
             // Update UI
@@ -295,44 +324,40 @@
             updateSummary();
             updateHiddenField();
             
-            // Update available serials list (re-run to refresh)
-            updateAvailableSerials();
+            // Refresh available items
+            updateAvailableItems();
             
             // Clear input
-            serialInput.value = '';
-            serialInput.focus();
+            assetInput.value = '';
+            assetInput.focus();
             
-            showNotification(`✓ Added ${serialNumber} (${currentHardwareTypeName})`, 'success');
+            showNotification(`✓ Added ${item.asset_number} - ${currentHardwareTypeName}`, 'success');
             return true;
         }
         
-        // Remove serial number by index
-        function removeSerialNumber(index) {
+        // Remove hardware item by index
+        function removeHardwareItem(index) {
             const removed = hardwareItems[index];
             if (removed) {
                 hardwareItems.splice(index, 1);
                 
-                // Update UI
                 updateTags();
                 updateSummary();
                 updateHiddenField();
+                updateAvailableItems();
                 
-                // Refresh available serials
-                updateAvailableSerials();
+                showNotification(`Removed ${removed.asset_number}`, 'info');
                 
-                showNotification(`Removed ${removed.serial_number} (${removed.hardware_type_name})`, 'info');
-                
-                // Re-enable input if needed
                 if (currentHardwareTypeId) {
-                    serialInput.disabled = false;
+                    assetInput.disabled = false;
                 }
             }
         }
         
-        // Update tags display with working close buttons
+        // Update tags display
         function updateTags() {
             if (hardwareItems.length === 0) {
-                tagsContainer.innerHTML = '<div class="text-muted">No serial numbers added yet. Select hardware type and enter serial numbers above.</div>';
+                tagsContainer.innerHTML = '<div class="text-muted">No hardware items added yet. Select hardware type and enter Asset Number above.</div>';
                 itemCountSpan.textContent = '0';
                 return;
             }
@@ -340,12 +365,13 @@
             let html = '';
             hardwareItems.forEach((item, index) => {
                 html += `
-                    <div class="badge bg-primary p-2 d-inline-flex align-items-center gap-2" style="font-size: 0.9rem;" data-index="${index}">
+                    <div class="badge bg-primary p-2 d-inline-flex align-items-center gap-2" style="font-size: 0.85rem;" data-index="${index}">
+                        <i class="bi bi-laptop"></i>
                         <span>
-                            <strong>${escapeHtml(item.hardware_type_name)}:</strong> 
-                            <code class="text-white">${escapeHtml(item.serial_number)}</code>
+                            <strong>${escapeHtml(item.hardware_type_name)}</strong><br>
+                            <small>Asset: <code class="text-white">${escapeHtml(item.asset_number)}</code></small>
                         </span>
-                        <button type="button" class="btn-close btn-close-white remove-serial-btn" style="font-size: 0.6rem; width: 0.6rem; height: 0.6rem;" data-index="${index}" aria-label="Remove"></button>
+                        <button type="button" class="btn-close btn-close-white remove-item-btn" style="font-size: 0.6rem; width: 0.6rem; height: 0.6rem;" data-index="${index}" aria-label="Remove"></button>
                     </div>
                 `;
             });
@@ -353,14 +379,14 @@
             tagsContainer.innerHTML = html;
             itemCountSpan.textContent = hardwareItems.length;
             
-            // Attach click event listeners to remove buttons
-            document.querySelectorAll('.remove-serial-btn').forEach(btn => {
+            // Attach click event listeners
+            document.querySelectorAll('.remove-item-btn').forEach(btn => {
                 btn.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
                     const index = parseInt(this.getAttribute('data-index'));
                     if (!isNaN(index)) {
-                        removeSerialNumber(index);
+                        removeHardwareItem(index);
                     }
                 });
             });
@@ -380,20 +406,25 @@
                 if (!grouped[item.hardware_type_name]) {
                     grouped[item.hardware_type_name] = [];
                 }
-                grouped[item.hardware_type_name].push(item.serial_number);
+                grouped[item.hardware_type_name].push({
+                    asset: item.asset_number,
+                    serial: item.serial_number
+                });
             });
             
             let html = '<div class="table-responsive"><table class="table table-sm table-borderless mb-0">';
-            html += '<thead><tr><th>Hardware Type</th><th>Serial Numbers</th><th>Count</th></tr></thead><tbody>';
+            html += '<thead><tr><th>Hardware Type</th><th>Asset Number</th><th>Serial Number (Ref)</th></tr></thead><tbody>';
             
-            for (const [type, serials] of Object.entries(grouped)) {
-                html += `
-                    <tr>
-                        <td><strong>${escapeHtml(type)}</strong></td>
-                        <td><code>${serials.map(s => escapeHtml(s)).join('</code>, <code>')}</code></td>
-                        <td><span class="badge bg-secondary">${serials.length}</span></td>
-                    </tr>
-                `;
+            for (const [type, items] of Object.entries(grouped)) {
+                for (const item of items) {
+                    html += `
+                        <tr>
+                            <td><strong>${escapeHtml(type)}</strong></td>
+                            <td><code>${escapeHtml(item.asset)}</code></td>
+                            <td><small class="text-muted">${escapeHtml(item.serial)}</small></td>
+                        </tr>
+                    `;
+                }
             }
             
             html += `</tbody></table></div>`;
@@ -403,7 +434,7 @@
             submitBtn.disabled = false;
         }
         
-        // Update hidden field with JSON data
+        // Update hidden field
         function updateHiddenField() {
             hardwareItemsJson.value = JSON.stringify(hardwareItems);
         }
@@ -414,9 +445,10 @@
             alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed top-0 end-0 m-3`;
             alertDiv.style.zIndex = '9999';
             alertDiv.style.minWidth = '300px';
+            alertDiv.style.maxWidth = '400px';
             alertDiv.innerHTML = `
                 <i class="bi bi-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
-                ${message}
+                ${escapeHtml(message)}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             `;
             document.body.appendChild(alertDiv);
@@ -429,44 +461,45 @@
         }
         
         function escapeHtml(text) {
+            if (!text) return '';
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
         
         // Handle Enter key
-        serialInput.addEventListener('keypress', function(e) {
+        assetInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 const value = this.value.trim();
                 if (value) {
-                    addSerialNumber(value);
+                    addHardwareItem(value);
                 }
             }
         });
         
-        // Handle paste with comma separation
-        serialInput.addEventListener('paste', function(e) {
+        // Handle paste
+        assetInput.addEventListener('paste', function(e) {
             e.preventDefault();
             const pastedText = (e.clipboardData || window.clipboardData).getData('text');
-            const serialNumbers = pastedText.split(/[,\n]/);
+            const items = pastedText.split(/[,\n]/);
             
-            for (let serial of serialNumbers) {
-                serial = serial.trim();
-                if (serial) {
-                    addSerialNumber(serial);
+            for (let item of items) {
+                item = item.trim();
+                if (item) {
+                    addHardwareItem(item);
                 }
             }
         });
         
         // Handle comma key
-        serialInput.addEventListener('keyup', function(e) {
+        assetInput.addEventListener('keyup', function(e) {
             if (e.key === ',' || e.key === '，') {
                 const value = this.value;
                 if (value.endsWith(',') || value.endsWith('，')) {
-                    const serial = value.slice(0, -1).trim();
-                    if (serial) {
-                        addSerialNumber(serial);
+                    const asset = value.slice(0, -1).trim();
+                    if (asset) {
+                        addHardwareItem(asset);
                     }
                 }
             }
@@ -478,25 +511,25 @@
             currentHardwareTypeId = this.value;
             currentHardwareTypeName = selectedOption.dataset.name;
             
-            updateAvailableSerials();
+            updateAvailableItems();
             
-            if (currentHardwareTypeId && availableSerials.length > 0) {
-                serialInput.disabled = false;
-                serialInput.focus();
+            if (currentHardwareTypeId && availableItems.length > 0) {
+                assetInput.disabled = false;
+                assetInput.focus();
             } else if (currentHardwareTypeId) {
-                serialInput.disabled = true;
+                assetInput.disabled = true;
             } else {
-                serialInput.disabled = true;
-                serialInput.placeholder = 'Select hardware type first';
+                assetInput.disabled = true;
+                assetInput.placeholder = 'Select hardware type first';
             }
         });
         
-        // Real-time validation as user types
-        serialInput.addEventListener('input', function(e) {
-            const serial = this.value.trim().toUpperCase();
-            if (serial && currentHardwareTypeId) {
-                const validation = validateSerialNumber(serial);
-                if (!validation.valid && serial.length > 3) {
+        // Real-time validation
+        assetInput.addEventListener('input', function(e) {
+            const asset = this.value.trim().toUpperCase();
+            if (asset && currentHardwareTypeId) {
+                const validation = findHardwareItem(asset);
+                if (!validation.valid && asset.length > 3) {
                     this.classList.add('is-invalid');
                     this.setCustomValidity(validation.message);
                 } else {
@@ -518,15 +551,14 @@
                 return false;
             }
             
-            // Show loading state
             const submitBtn = document.querySelector('#submitBtn');
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Creating Assignment...';
         });
         
         // Initialize
-        serialInput.disabled = true;
-        serialInput.setAttribute('list', 'serialSuggestions');
+        assetInput.disabled = true;
+        assetInput.setAttribute('list', 'assetSuggestions');
         
         // Set min date for return date
         const today = new Date().toISOString().split('T')[0];
@@ -540,6 +572,7 @@
 <style>
     .badge {
         transition: all 0.2s ease;
+        cursor: default;
     }
     
     .badge:hover {
@@ -552,18 +585,24 @@
         padding: 2px 6px;
         border-radius: 3px;
         color: white;
+        font-size: 0.8rem;
+    }
+    
+    .badge small {
+        font-size: 0.7rem;
+        opacity: 0.9;
     }
     
     .gap-2 {
         gap: 0.5rem;
     }
     
-    #serialInput {
+    #assetInput {
         font-family: monospace;
         text-transform: uppercase;
     }
     
-    #serialInput.is-invalid {
+    #assetInput.is-invalid {
         border-color: #dc3545;
         background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
         background-repeat: no-repeat;
@@ -591,6 +630,10 @@
     
     .end-0 {
         right: 0 !important;
+    }
+    
+    .table-sm td {
+        vertical-align: middle;
     }
 </style>
 {% endblock %}
