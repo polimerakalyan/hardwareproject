@@ -2257,6 +2257,8 @@ def download_hardware_template(request):
 
 
 @login_required
+
+@login_required
 def edit_hardware(request, hardware_id):
     if request.user.user_type != 'manager':
         return redirect('employee_dashboard')
@@ -2266,13 +2268,29 @@ def edit_hardware(request, hardware_id):
     
     if request.method == 'POST':
         hardware_type_id = request.POST.get('hardware_type')
+        asset_number = request.POST.get('asset_number')
         serial_number = request.POST.get('serial_number')
-        model_name = request.POST.get('model_name')
-        brand = request.POST.get('brand')
-        specifications = request.POST.get('specifications')
-        purchase_date = request.POST.get('purchase_date')
         status = request.POST.get('status')
         
+        # Validate required fields
+        if not hardware_type_id:
+            messages.error(request, 'Hardware type is required!')
+            return redirect('edit_hardware', hardware_id=hardware_id)
+        
+        if not asset_number:
+            messages.error(request, 'Asset number is required!')
+            return redirect('edit_hardware', hardware_id=hardware_id)
+        
+        if not serial_number:
+            messages.error(request, 'Serial number is required!')
+            return redirect('edit_hardware', hardware_id=hardware_id)
+        
+        # Check if asset number already exists (excluding current hardware)
+        if Hardware.objects.filter(asset_number=asset_number).exclude(id=hardware_id).exists():
+            messages.error(request, 'Asset number already exists!')
+            return redirect('edit_hardware', hardware_id=hardware_id)
+        
+        # Check if serial number already exists (excluding current hardware)
         if Hardware.objects.filter(serial_number=serial_number).exclude(id=hardware_id).exists():
             messages.error(request, 'Serial number already exists!')
             return redirect('edit_hardware', hardware_id=hardware_id)
@@ -2283,15 +2301,12 @@ def edit_hardware(request, hardware_id):
             messages.error(request, 'Invalid hardware type selected!')
             return redirect('edit_hardware', hardware_id=hardware_id)
         
+        hardware.asset_number = asset_number
         hardware.serial_number = serial_number
-        hardware.model_name = model_name
-        hardware.brand = brand
-        hardware.specifications = specifications
-        hardware.purchase_date = purchase_date if purchase_date else None
         hardware.status = status
         hardware.save()
         
-        messages.success(request, 'Hardware updated successfully!')
+        messages.success(request, f'Hardware updated successfully! Asset Number: {asset_number}')
         return redirect('manage_hardware')
     
     context = {
