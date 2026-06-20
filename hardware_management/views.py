@@ -2497,6 +2497,256 @@ def create_assignment(request):
     }
     return render(request, 'manager/create_assignment.html', context)
 
+
+
+
+def send_assignment_email(assignment, employee, project, hardware_details):
+    """Send assignment details email to employee"""
+    from django.core.mail import send_mail
+    from django.conf import settings
+    
+    try:
+        employee_name = employee.get_full_name() or employee.username
+        manager_name = assignment.assigned_by.get_full_name() or assignment.assigned_by.username
+        
+        # Build hardware list for email
+        hardware_list_html = ''
+        hardware_list_text = ''
+        for idx, hw in enumerate(hardware_details, 1):
+            # Safely get values with defaults - only Hardware Type and Asset Number
+            hw_type = hw.get('type', 'Unknown')
+            asset_number = hw.get('asset_number', 'N/A')
+            
+            hardware_list_html += f"""
+                <tr>
+                    <td style="padding: 8px 12px; border-bottom: 1px solid #e9ecef;">{idx}</td>
+                    <td style="padding: 8px 12px; border-bottom: 1px solid #e9ecef;"><strong>{hw_type}</strong></td>
+                    <td style="padding: 8px 12px; border-bottom: 1px solid #e9ecef;"><code style="background: #f8f9fa; padding: 2px 6px; border-radius: 4px;">{asset_number}</code></td>
+                </tr>
+            """
+            hardware_list_text += f"{idx}. {hw_type} - Asset: {asset_number}\n"
+        
+        subject = f'Hardware Assignment - {project.project_name} - {assignment.assignment_id}'
+        
+        # Get exam city safely - it's a string field, not a date
+        exam_city = getattr(assignment, 'exam_city', 'Not specified')
+        if not exam_city:
+            exam_city = 'Not specified'
+        
+        # Format dates safely - check if they are date objects
+        assigned_date = ''
+        expected_return_date = ''
+        
+        if assignment.assigned_date:
+            if hasattr(assignment.assigned_date, 'strftime'):
+                assigned_date = assignment.assigned_date.strftime('%d %B %Y')
+            else:
+                assigned_date = str(assignment.assigned_date)
+        else:
+            assigned_date = 'N/A'
+        
+        if assignment.expected_return_date:
+            if hasattr(assignment.expected_return_date, 'strftime'):
+                expected_return_date = assignment.expected_return_date.strftime('%d %B %Y')
+            else:
+                expected_return_date = str(assignment.expected_return_date)
+        else:
+            expected_return_date = 'N/A'
+        
+        html_message = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                body {{ font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 700px; margin: 0 auto; padding: 20px; }}
+                .header {{ background: linear-gradient(90deg, #2c3e50 0%, #3498db 100%); color: white; padding: 25px; text-align: center; border-radius: 8px 8px 0 0; }}
+                .header h2 {{ margin: 0; font-weight: 300; }}
+                .content {{ background: #ffffff; padding: 30px; border: 1px solid #e9ecef; border-top: none; border-radius: 0 0 8px 8px; }}
+                .info-box {{ background: #f8f9fa; padding: 15px 20px; margin: 15px 0; border-radius: 6px; border-left: 4px solid #3498db; }}
+                .info-box h6 {{ margin: 0 0 5px 0; color: #495057; }}
+                .table {{ width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 14px; }}
+                .table th {{ background: #2c3e50; color: white; padding: 10px 12px; text-align: left; }}
+                .table td {{ padding: 10px 12px; border-bottom: 1px solid #e9ecef; }}
+                .table tr:hover {{ background: #f8f9fa; }}
+                .badge {{ display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }}
+                .badge-success {{ background: #28a745; color: white; }}
+                .badge-primary {{ background: #3498db; color: white; }}
+                .badge-warning {{ background: #ffc107; color: #212529; }}
+                .footer {{ margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef; color: #6c757d; font-size: 12px; text-align: center; }}
+                .btn {{ display: inline-block; padding: 10px 24px; background: linear-gradient(90deg, #2c3e50 0%, #3498db 100%); color: white; text-decoration: none; border-radius: 6px; margin: 10px 0; }}
+                .btn:hover {{ opacity: 0.9; }}
+                .alert {{ padding: 12px 16px; border-radius: 6px; margin: 10px 0; }}
+                .alert-info {{ background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }}
+                .alert-warning {{ background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }}
+                .highlight {{ background: #e8f4fc; padding: 2px 6px; border-radius: 4px; }}
+                code {{ background: #f8f9fa; padding: 2px 6px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 13px; }}
+                @media (max-width: 600px) {{
+                    .table {{ font-size: 12px; }}
+                    .table th, .table td {{ padding: 6px 8px; }}
+                    .content {{ padding: 15px; }}
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h2>📋 Hardware Assignment Notification</h2>
+                </div>
+                <div class="content">
+                    <p>Dear <strong>{employee_name}</strong>,</p>
+                    
+                    <p>You have been assigned hardware for the upcoming examination. Please review the details below.</p>
+                    
+                    <div class="info-box">
+                        <h6>📌 Assignment Information</h6>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                            <tr>
+                                <td style="padding: 4px 0; width: 35%;"><strong>Assignment ID:</strong></td>
+                                <td style="padding: 4px 0;"><code>{assignment.assignment_id}</code></td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 4px 0;"><strong>Project:</strong></td>
+                                <td style="padding: 4px 0;">{project.project_name} ({project.project_id})</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 4px 0;"><strong>Exam City:</strong></td>
+                                <td style="padding: 4px 0;"><span class="badge badge-success">{exam_city}</span></td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 4px 0;"><strong>Assigned Date:</strong></td>
+                                <td style="padding: 4px 0;">{assigned_date}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 4px 0;"><strong>Expected Return:</strong></td>
+                                <td style="padding: 4px 0;">{expected_return_date}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 4px 0;"><strong>Assigned By:</strong></td>
+                                <td style="padding: 4px 0;">{manager_name}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    <h6 style="margin-top: 20px; margin-bottom: 10px;">🖥️ Assigned Hardware Items</h6>
+                    <div style="overflow-x: auto;">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;">#</th>
+                                    <th>Hardware Type</th>
+                                    <th>Asset Number</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {hardware_list_html}
+                            </tbody>
+                        </table>
+                    </div>
+                    <p style="margin: 10px 0;"><span class="badge badge-primary">Total Items: {len(hardware_details)}</span></p>
+                    
+                    <div class="alert alert-info">
+                        <strong>📌 Next Steps:</strong>
+                        <ol style="margin: 8px 0 0 20px;">
+                            <li>Go to the <a href="http://eduquityinventory.co.in/" style="color: #3498db; text-decoration: none; font-weight: 600;">Eduquity Hardware Portal</a></li>
+                            <li>Navigate to <strong>"My Assignments"</strong> section</li>
+                            <li>Click <strong>"Enter Asset"</strong> to input the Asset Numbers from your physical devices</li>
+                            <li>Your manager will verify the entries</li>
+                        </ol>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <strong>⚠️ Important Instructions:</strong>
+                        <ul style="margin: 8px 0 0 20px;">
+                            <li>Asset Numbers must be entered accurately from the physical devices</li>
+                            <li>Asset Number is the primary identifier for verification</li>
+                            <li>Keep the hardware safe and in good condition</li>
+                            <li>Return all hardware before the due date: <strong>{expected_return_date}</strong></li>
+                            <li><strong>Bring hardware to {exam_city} for the exam</strong></li>
+                        </ul>
+                    </div>
+                    
+                    <p style="margin-top: 20px;">
+                        <a href="http://eduquityinventory.co.in/" class="btn">🚀 Go to Hardware Portal</a>
+                    </p>
+                    
+                    <div class="footer">
+                        <p><strong>Eduquity Hardware Management Team</strong><br>
+                        Established in 2000 - Thought-leader in the Indian assessment industry</p>
+                        <p><em>This is an automated email. Please do not reply to this message.</em></p>
+                        <p style="font-size: 11px;">If you have any issues, please contact your manager: {manager_name}</p>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        plain_message = f"""
+        HARDWARE ASSIGNMENT NOTIFICATION
+        ================================
+        
+        Dear {employee_name},
+        
+        You have been assigned hardware for the upcoming examination.
+        
+        Assignment Information:
+        -----------------------
+        Assignment ID: {assignment.assignment_id}
+        Project: {project.project_name} ({project.project_id})
+        Exam City: {exam_city}
+        Assigned Date: {assigned_date}
+        Expected Return: {expected_return_date}
+        Assigned By: {manager_name}
+        
+        Assigned Hardware Items:
+        -----------------------
+        {hardware_list_text}
+        
+        Total Items: {len(hardware_details)}
+        
+        Next Steps:
+        ----------
+        1. Go to the Eduquity Hardware Portal
+        2. Navigate to "My Assignments" section
+        3. Click "Enter Asset" to input the Asset Numbers from your physical devices
+        4. Your manager will verify the entries
+        
+        Important Instructions:
+        -----------------------
+        - Asset Numbers must be entered accurately from the physical devices
+        - Asset Number is the primary identifier for verification
+        - Keep the hardware safe and in good condition
+        - Return all hardware before the due date: {expected_return_date}
+        - Bring hardware to {exam_city} for the exam
+        
+        If you have any issues, please contact your manager: {manager_name}
+        
+        ---
+        Eduquity Hardware Management Team
+        """
+        
+        # Send the email
+        send_mail(
+            subject=subject,
+            message=plain_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[employee.email],
+            html_message=html_message,
+            fail_silently=False,
+        )
+        
+        return True
+        
+    except Exception as e:
+        # Log the error for debugging
+        print(f"Email sending failed: {str(e)}")
+        # Re-raise to be caught by the calling function
+        raise Exception(f"Email sending failed: {str(e)}")
+
+
 from django.db.models import Count, Q
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
