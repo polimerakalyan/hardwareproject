@@ -2366,6 +2366,8 @@ def manage_hardware_types(request):
 
 # ============== ASSIGNMENT VIEWS ==============
 @login_required
+
+@login_required
 def create_assignment(request):
     if request.user.user_type != 'manager':
         return redirect('employee_dashboard')
@@ -2404,28 +2406,33 @@ def create_assignment(request):
             messages.error(request, 'Invalid employee or project selected!')
             return redirect('create_assignment')
         
-        # Validate and collect hardware items
+        # Validate and collect hardware items - Asset Number is primary
         valid_hardware = []
         errors = []
         
         for item in hardware_items:
             hardware_type_id = item.get('hardware_type_id')
-            serial_number = item.get('serial_number', '').strip()
+            asset_number = item.get('asset_number', '').strip()
+            
+            if not asset_number:
+                errors.append(f"Asset number is required for hardware type {item.get('hardware_type_name', 'Unknown')}")
+                continue
             
             try:
+                # Find by asset number (primary identifier)
                 hardware = Hardware.objects.get(
                     hardware_type_id=hardware_type_id,
-                    serial_number=serial_number,
+                    asset_number=asset_number,
                     status='available',
                     created_by=request.user
                 )
                 valid_hardware.append(hardware)
             except Hardware.DoesNotExist:
                 hardware_type = HardwareType.objects.get(id=hardware_type_id)
-                errors.append(f"Hardware '{serial_number}' (Type: {hardware_type.name}) not found or not available")
+                errors.append(f"Asset '{asset_number}' (Type: {hardware_type.name}) not found or not available")
         
         if errors:
-            for error in errors[:5]:  # Show first 5 errors
+            for error in errors[:5]:
                 messages.error(request, error)
             if len(errors) > 5:
                 messages.error(request, f'...and {len(errors) - 5} more errors')
@@ -2446,6 +2453,7 @@ def create_assignment(request):
         )
         
         # Create assignment items
+        hardware_details = []
         for hardware in valid_hardware:
             HardwareAssignmentItem.objects.create(
                 assignment=assignment,
@@ -2455,9 +2463,31 @@ def create_assignment(request):
             )
             hardware.status = 'assigned'
             hardware.save()
+            
+            hardware_details.append({
+                'type': hardware.hardware_type.name,
+                'asset_number': hardware.asset_number,
+                'serial_number': hardware.serial_number,
+                'model': hardware.model_name,
+                'brand': hardware.brand or 'N/A'
+            })
         
-        messages.success(request, f'Assignment created successfully with {len(valid_hardware)} hardware item(s)!')
+        # Send email to employee
+        try:
+            send_assignment_email(assignment, employee, project, hardware_details)
+            messages.success(request, f'Assignment created successfully with {len(valid_hardware)} hardware item(s)! Email sent to {employee.email}')
+        except Exception as e:
+            messages.success(request, f'Assignment created successfully with {len(valid_hardware)} hardware item(s)! But email could not be sent: {str(e)}')
+        
         return redirect('view_assignments')
+    
+    # Get hardware with asset numbers for the template
+    for hw_type in hardware_types:
+        hw_type.hardware_list = Hardware.objects.filter(
+            hardware_type=hw_type,
+            status='available',
+            created_by=request.user
+        ).values('id', 'asset_number', 'serial_number')
     
     context = {
         'employees': employees,
