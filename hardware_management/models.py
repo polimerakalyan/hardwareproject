@@ -315,3 +315,15 @@ class HardwareKnowledgeBase(models.Model):
     
     def __str__(self):
         return self.title
+
+
+  
+class HardwareAssetEntry(models.Model):
+    hardware_item = models.OneToOneField('HardwareAssignmentItem', on_delete=models.CASCADE, related_name='asset_entry')
+    entered_asset_number = models.CharField(max_length=100)
+    entered_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name='asset_entries')
+    entered_at = models.DateTimeField(auto_now_add=True)
+    verified = models.BooleanField(default=False)
+    verified_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='verified_asset_entries')
+    verified_at = models.DateTimeField(null=True, blank=True)    
+  
