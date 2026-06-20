@@ -81,14 +81,13 @@
                                 <td>{{ assignment.assigned_date|date:"d M Y" }}</td>
                             </tr>
                             <tr>
-                                <th>Return Date:</th>
+                                <th>Expected Return:</th>
                                 <td>
                                     {% if assignment.actual_return_date %}
-                                        {{ assignment.actual_return_date|date:"d M Y" }}
-                                        <span class="badge bg-success ms-2">Returned</span>
+                                        <span class="text-success"><i class="bi bi-check-circle"></i> Returned on {{ assignment.actual_return_date|date:"d M Y" }}</span>
                                     {% else %}
                                         {{ assignment.expected_return_date|date:"d M Y" }}
-                                        <span class="badge bg-warning">Expected</span>
+                                        <span class="badge bg-warning ms-2">Expected</span>
                                     {% endif %}
                                 </td>
                             </tr>
@@ -131,13 +130,13 @@
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-hover">
-                        <thead>
+                        <thead class="table-light">
                             <tr>
                                 <th>#</th>
                                 <th>Hardware Type</th>
-                                <th>Model</th>
+                                <th>Asset Number</th>
                                 <th>Serial Number</th>
-                                <th>Entered Serial</th>
+                                <th>Entered Asset</th>
                                 <th>Status</th>
                                 <th>Verification</th>
                             </tr>
@@ -146,38 +145,44 @@
                             {% for item in items %}
                             <tr>
                                 <td>{{ forloop.counter }}</td>
-                                <td>{{ item.hardware.hardware_type.name }}</td>
-                                <td>{{ item.hardware.model_name }}</td>
+                                <td><strong>{{ item.hardware.hardware_type.name }}</strong></td>
                                 <td>
-                                    <code>{{ item.hardware.serial_number }}</code>
+                                    <code class="asset-number">{{ item.asset_number }}</code>
                                 </td>
                                 <td>
-                                    {% if item.has_serial_entry %}
-                                        <strong>{{ item.serial_entry.serial_number }}</strong>
+                                    <code class="serial-number">{{ item.serial_number }}</code>
+                                </td>
+                                <td>
+                                    <!-- FIX: Use item.entered_asset -->
+                                    {% if item.entered_asset %}
+                                        <code class="text-success">{{ item.entered_asset }}</code>
                                     {% else %}
-                                        <span class="text-muted">Not entered</span>
+                                        <span class="text-muted">— Not entered —</span>
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <span class="badge bg-{{ item.hardware.status|yesno:'warning,success,info,danger,secondary' }}">
-                                        {{ item.hardware.get_status_display }}
-                                    </span>
+                                    {% if assignment.actual_return_date %}
+                                        <span class="badge bg-secondary">Returned</span>
+                                    {% else %}
+                                        <span class="badge {% if item.hardware.status == 'available' %}bg-success{% elif item.hardware.status == 'assigned' %}bg-warning{% elif item.hardware.status == 'in_use' %}bg-info{% elif item.hardware.status == 'maintenance' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                            {{ item.hardware.get_status_display }}
+                                        </span>
+                                    {% endif %}
                                 </td>
                                 <td>
-                                    {% if item.has_serial_entry %}
-                                        {% if item.serial_entry.verified %}
-                                            <span class="badge bg-success">
-                                                <i class="bi bi-check-circle"></i> Verified
-                                            </span>
-                                            <br>
-                                            <small class="text-muted">
-                                                by {{ item.serial_entry.verified_by.username }}
-                                            </small>
-                                        {% else %}
-                                            <span class="badge bg-warning">
-                                                <i class="bi bi-clock"></i> Pending
-                                            </span>
-                                        {% endif %}
+                                    <!-- FIX: Use item.is_verified -->
+                                    {% if item.is_verified %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle"></i> Verified
+                                        </span>
+                                        <br>
+                                        <small class="text-muted">
+                                            by {{ item.asset_entry.verified_by.get_full_name|default:item.asset_entry.verified_by.username }}
+                                        </small>
+                                    {% elif item.entered_asset %}
+                                        <span class="badge bg-warning">
+                                            <i class="bi bi-clock"></i> Pending
+                                        </span>
                                     {% else %}
                                         <span class="badge bg-danger">
                                             <i class="bi bi-exclamation-circle"></i> Not Entered
@@ -199,17 +204,29 @@
                 </div>
                 
                 <div class="row mt-4">
-                    <div class="col-md-4 text-center">
-                        <div class="h4">{{ items|length }}</div>
-                        <small class="text-muted">Total Items</small>
+                    <div class="col-md-3 text-center">
+                        <div class="bg-light rounded p-3">
+                            <div class="h3 text-primary mb-0">{{ total_items }}</div>
+                            <small class="text-muted">Total Items</small>
+                        </div>
                     </div>
-                    <div class="col-md-4 text-center">
-                        <div class="h4 text-success">{{ items|length|add:"0" }}</div>
-                        <small class="text-muted">Verified</small>
+                    <div class="col-md-3 text-center">
+                        <div class="bg-light rounded p-3">
+                            <div class="h3 text-success mb-0">{{ verified_count }}</div>
+                            <small class="text-muted">Verified</small>
+                        </div>
                     </div>
-                    <div class="col-md-4 text-center">
-                        <div class="h4 text-warning">{{ items|length|add:"0" }}</div>
-                        <small class="text-muted">Pending</small>
+                    <div class="col-md-3 text-center">
+                        <div class="bg-light rounded p-3">
+                            <div class="h3 text-warning mb-0">{{ pending_count }}</div>
+                            <small class="text-muted">Pending</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <div class="bg-light rounded p-3">
+                            <div class="h3 text-danger mb-0">{{ not_entered_count }}</div>
+                            <small class="text-muted">Not Entered</small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -218,7 +235,7 @@
     
     <div class="col-md-4">
         <div class="card mb-4">
-            <div class="card-header bg-warning text-white">
+            <div class="card-header bg-warning text-dark">
                 <h4 class="mb-0">
                     <i class="bi bi-gear"></i> Actions
                 </h4>
@@ -227,6 +244,9 @@
                 {% if not assignment.actual_return_date %}
                 <a href="{% url 'return_assignment' assignment.id %}" class="btn btn-success w-100 mb-3">
                     <i class="bi bi-check-circle"></i> Mark as Returned
+                </a>
+                <a href="{% url 'view_serial_entries' %}" class="btn btn-outline-info w-100 mb-2">
+                    <i class="bi bi-upc-scan"></i> View Asset Entries
                 </a>
                 {% else %}
                 <div class="alert alert-success">
@@ -238,12 +258,12 @@
                 
                 <div class="list-group">
                     <a href="{% url 'view_serial_entries' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-upc-scan"></i> View Serial Entries
+                        <i class="bi bi-upc-scan"></i> View Asset Entries
                     </a>
-                    <a href="#" class="list-group-item list-group-item-action">
+                    <a href="#" class="list-group-item list-group-item-action" onclick="window.print(); return false;">
                         <i class="bi bi-printer"></i> Print Assignment
                     </a>
-                    <a href="#" class="list-group-item list-group-item-action">
+                    <a href="mailto:{{ assignment.employee.email }}" class="list-group-item list-group-item-action">
                         <i class="bi bi-envelope"></i> Email Employee
                     </a>
                 </div>
@@ -313,29 +333,32 @@
                             <h6>Exam City Specified</h6>
                             <small class="text-muted">{{ assignment.assigned_date|date:"d M Y" }}</small>
                             <br>
-                            <small>{{ assignment.exam_city }}</small>
+                            <small class="text-info">{{ assignment.exam_city }}</small>
                         </div>
                     </div>
                     {% endif %}
                     
                     {% for item in items %}
-                        {% if item.has_serial_entry %}
+                        <!-- FIX: Use item.has_asset_entry and item.asset_entry -->
+                        {% if item.has_asset_entry %}
                         <div class="timeline-item">
                             <div class="timeline-marker bg-info"></div>
                             <div class="timeline-content">
-                                <h6>Serial Entered</h6>
-                                <small class="text-muted">{{ item.serial_entry.entered_at|date:"d M Y H:i" }}</small>
+                                <h6>Asset Entered</h6>
+                                <small class="text-muted">{{ item.asset_entry.entered_at|date:"d M Y H:i" }}</small>
                                 <br>
-                                <small>{{ item.hardware.hardware_type.name }}</small>
+                                <small>{{ item.hardware.hardware_type.name }} ({{ item.entered_asset }})</small>
                             </div>
                         </div>
                         
-                        {% if item.serial_entry.verified %}
+                        {% if item.asset_entry.verified %}
                         <div class="timeline-item">
                             <div class="timeline-marker bg-primary"></div>
                             <div class="timeline-content">
-                                <h6>Serial Verified</h6>
-                                <small class="text-muted">{{ item.serial_entry.verified_at|date:"d M Y H:i" }}</small>
+                                <h6>Asset Verified</h6>
+                                <small class="text-muted">{{ item.asset_entry.verified_at|date:"d M Y H:i" }}</small>
+                                <br>
+                                <small>by {{ item.asset_entry.verified_by.get_full_name|default:item.asset_entry.verified_by.username }}</small>
                             </div>
                         </div>
                         {% endif %}
@@ -363,13 +386,30 @@
     .table-borderless th {
         font-weight: 600;
         color: #495057;
+        padding: 8px 0;
+    }
+    
+    .table-borderless td {
+        padding: 8px 0;
     }
     
     code {
         background-color: #f8f9fa;
         padding: 2px 6px;
         border-radius: 3px;
-        font-size: 0.9em;
+        font-size: 0.85em;
+        font-family: 'Courier New', monospace;
+    }
+    
+    .asset-number {
+        background-color: #e7f1ff;
+        color: #0d6efd;
+        font-weight: 600;
+    }
+    
+    .serial-number {
+        background-color: #f8f9fa;
+        color: #6c757d;
     }
     
     .timeline {
@@ -404,8 +444,34 @@
     .bg-opacity-10 {
         --bs-bg-opacity: 0.1;
     }
+    
     .bg-opacity-25 {
         --bs-bg-opacity: 0.25;
+    }
+    
+    .badge {
+        font-weight: 500;
+        border-radius: 20px;
+    }
+    
+    @media print {
+        .btn, .card-header, .top-nav, .sidebar, .main-footer, .actions, .floating-chat-btn {
+            display: none !important;
+        }
+        .card {
+            box-shadow: none !important;
+            border: 1px solid #ddd;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .table td, .table th {
+            font-size: 0.75rem;
+            padding: 0.5rem;
+        }
+        .asset-number, .serial-number {
+            font-size: 0.7rem;
+        }
     }
 </style>
 {% endblock %}
