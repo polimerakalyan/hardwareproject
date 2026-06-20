@@ -47,11 +47,11 @@
                         <div class="col-md-12">
                             <div class="border rounded p-3 bg-light">
                                 <i class="bi bi-check-circle-fill text-success"></i>
-                                <strong>Required Columns:</strong>
+                                <strong>Required Columns (in order):</strong>
                                 <ul class="mb-0 mt-2 small">
-                                    <li><code>hardware_type</code> - Laptop, Desktop, Firewall, etc.</li>
-                                    <li><code>serial_number</code> - Unique identifier</li>
-                                    <li><code>model_name</code> - Model name/number</li>
+                                    <li><code>1. hardware_type</code> - Laptop, Desktop, Firewall, etc.</li>
+                                    <li><code>2. asset_number</code> - Unique asset tag number</li>
+                                    <li><code>3. serial_number</code> - Manufacturer's serial number</li>
                                 </ul>
                             </div>
                         </div>
@@ -80,37 +80,28 @@
                 <form method="POST" action="{% url 'add_hardware' %}">
                     {% csrf_token %}
                     
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="hardware_type" class="form-label">Hardware Type *</label>
-                            <select class="form-select" id="hardware_type" name="hardware_type" required>
-                                <option value="">Select hardware type</option>
-                                {% for hw_type in hardware_types %}
-                                <option value="{{ hw_type.id }}">{{ hw_type.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        
-                        <div class="col-md-6 mb-3">
-                            <label for="serial_number" class="form-label">Serial Number *</label>
-                            <input type="text" class="form-control" id="serial_number" name="serial_number" 
-                                   placeholder="Enter unique serial number" required>
-                            <small class="text-muted">Must be unique for each hardware item</small>
-                        </div>
+                    <div class="mb-3">
+                        <label for="hardware_type" class="form-label">Hardware Type *</label>
+                        <select class="form-select" id="hardware_type" name="hardware_type" required>
+                            <option value="">Select hardware type</option>
+                            {% for hw_type in hardware_types %}
+                            <option value="{{ hw_type.id }}">{{ hw_type.name }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
                     
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="model_name" class="form-label">Model Name *</label>
-                            <input type="text" class="form-control" id="model_name" name="model_name" 
-                                   placeholder="e.g., P16, L14, Optiplex" required>
-                        </div>
-                        
-                        <div class="col-md-6 mb-3">
-                            <label for="brand" class="form-label">Brand (Optional)</label>
-                            <input type="text" class="form-control" id="brand" name="brand" 
-                                   placeholder="e.g., Dell, HP, Lenovo, Cisco">
-                        </div>
+                    <div class="mb-3">
+                        <label for="asset_number" class="form-label">Asset Number *</label>
+                        <input type="text" class="form-control" id="asset_number" name="asset_number" 
+                               placeholder="e.g., AST-0001, HW-001" required>
+                        <small class="text-muted">Unique asset tag for tracking</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="serial_number" class="form-label">Serial Number *</label>
+                        <input type="text" class="form-control" id="serial_number" name="serial_number" 
+                               placeholder="Enter manufacturer's serial number" required>
+                        <small class="text-muted">Manufacturer's unique serial number</small>
                     </div>
                     
                     <div class="alert alert-info">
@@ -184,15 +175,15 @@
                 <div class="d-flex mb-3">
                     <i class="bi bi-shield-check fs-4 text-success me-3"></i>
                     <div>
-                        <h6 class="mb-1">Unique Serial Numbers</h6>
-                        <small class="text-muted">System validates serial numbers to prevent duplicates</small>
+                        <h6 class="mb-1">Unique Asset Numbers</h6>
+                        <small class="text-muted">System validates asset numbers to prevent duplicates</small>
                     </div>
                 </div>
                 <div class="d-flex">
-                    <i class="bi bi-download fs-4 text-info me-3"></i>
+                    <i class="bi bi-upc-scan fs-4 text-info me-3"></i>
                     <div>
-                        <h6 class="mb-1">Template Available</h6>
-                        <small class="text-muted">Download template with example data for easy import</small>
+                        <h6 class="mb-1">Unique Serial Numbers</h6>
+                        <small class="text-muted">Manufacturer serial numbers must also be unique</small>
                     </div>
                 </div>
             </div>
