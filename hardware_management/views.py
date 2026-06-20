@@ -2827,6 +2827,7 @@ def view_assignments(request):
     }
     return render(request, 'manager/view_assignments.html', context)
 
+
 @login_required
 def assignment_details(request, assignment_id):
     if request.user.user_type != 'manager':
@@ -2837,16 +2838,37 @@ def assignment_details(request, assignment_id):
         id=assignment_id, 
         assigned_by=request.user
     )
-    items = HardwareAssignmentItem.objects.filter(assignment=assignment)
+    items = HardwareAssignmentItem.objects.filter(assignment=assignment).select_related('hardware__hardware_type')
+    
+    verified_count = 0
+    pending_count = 0
+    not_entered_count = 0
     
     for item in items:
-        item.has_serial_entry = hasattr(item, 'serial_entry')
-        if item.has_serial_entry:
-            item.serial_entry_status = item.serial_entry.verified
+        # FIX: Use asset_entry instead of serial_entry
+        item.has_asset_entry = hasattr(item, 'asset_entry')
+        if item.has_asset_entry:
+            item.entered_asset = item.asset_entry.entered_asset_number
+            item.is_verified = item.asset_entry.verified
+            if item.asset_entry.verified:
+                verified_count += 1
+            else:
+                pending_count += 1
+        else:
+            not_entered_count += 1
+    
+    # Get hardware details with asset numbers (primary)
+    for item in items:
+        item.asset_number = item.hardware.asset_number if item.hardware.asset_number else 'N/A'
+        item.serial_number = item.hardware.serial_number
     
     context = {
         'assignment': assignment,
         'items': items,
+        'verified_count': verified_count,
+        'pending_count': pending_count,
+        'not_entered_count': not_entered_count,
+        'total_items': items.count(),
     }
     return render(request, 'manager/assignment_details.html', context)
 @login_required
