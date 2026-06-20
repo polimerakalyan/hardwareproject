@@ -2059,6 +2059,8 @@ def add_hardware(request):
 
 
 @login_required
+
+@login_required
 def download_hardware_template(request):
     """Download Excel template for bulk hardware import"""
     if request.user.user_type != 'manager':
@@ -2068,8 +2070,8 @@ def download_hardware_template(request):
     ws = wb.active
     ws.title = "Hardware Template"
     
-    # Define headers - removed specifications and purchase_date
-    headers = ['hardware_type', 'serial_number', 'model_name', 'brand']
+    # Define headers - hardware_type first, then asset_number, then serial_number
+    headers = ['hardware_type', 'asset_number', 'serial_number']
     
     # Style for headers
     header_font = Font(bold=True, color="FFFFFF")
@@ -2087,7 +2089,7 @@ def download_hardware_template(request):
             bottom=Side(style='thin')
         )
     
-    # Get ALL hardware types from database (not just 5)
+    # Get ALL hardware types from database
     hardware_types = HardwareType.objects.all().order_by('name')
     
     # Create a separate sheet for hardware types list
@@ -2109,12 +2111,10 @@ def download_hardware_template(request):
         ws_types_list.cell(row=idx, column=1, value=hw_type.name)
         ws_types_list.cell(row=idx, column=2, value=hw_type.description or '')
     
-    # Create dropdown validation for hardware_type column using the list
+    # Create dropdown validation for hardware_type column (Column A)
     if hardware_types.exists():
-        # Create named range for dropdown
         range_ref = f'HardwareTypesList!$A$2:$A${hardware_types.count() + 1}'
         
-        # Add data validation for column A (from row 2 onwards)
         from openpyxl.worksheet.datavalidation import DataValidation
         
         dv = DataValidation(type="list", formula1=range_ref, showDropDown=True)
@@ -2123,30 +2123,28 @@ def download_hardware_template(request):
         dv.prompt = 'Select hardware type from dropdown'
         dv.promptTitle = 'Hardware Type'
         
-        # Apply validation to column A from row 2 to row 1000
         ws.add_data_validation(dv)
-        dv.add('A2:A1000')
+        dv.add('A2:A1000')  # Column A is hardware_type
     
-    # Add example data (using the first few hardware types as examples)
+    # Add example data
     example_data = []
-    example_types = hardware_types[:10]  # Show first 10 types as examples
+    example_types = hardware_types[:10]
     
     for idx, hw_type in enumerate(example_types):
         example_data.append([
-            hw_type.name,
-            f'{hw_type.name[:3].upper()}-{str(idx+1).zfill(3)}',
-            f'Model {hw_type.name}',
-            'Brand Name'
+            hw_type.name,  # hardware_type
+            f'AST-{str(idx+1).zfill(4)}',  # asset_number
+            f'{hw_type.name[:3].upper()}-{str(idx+1).zfill(3)}'  # serial_number
         ])
     
     # Add a few blank rows for user to fill
-    for i in range(5):  # Add 5 empty rows as templates
-        example_data.append(['', '', '', ''])
+    for i in range(5):
+        example_data.append(['', '', ''])
     
     # Write example data
     for row_idx, row_data in enumerate(example_data, 2):
         for col_idx, value in enumerate(row_data, 1):
-            if value:  # Only write if value is not empty
+            if value:
                 cell = ws.cell(row=row_idx, column=col_idx, value=value)
                 cell.border = Border(
                     left=Side(style='thin'),
@@ -2155,7 +2153,7 @@ def download_hardware_template(request):
                     bottom=Side(style='thin')
                 )
     
-    # Add notes sheet with ALL hardware types
+    # Add notes sheet
     ws_notes = wb.create_sheet("Instructions")
     
     notes = [
@@ -2163,15 +2161,13 @@ def download_hardware_template(request):
         [""],
         ["🔹 REQUIRED COLUMNS:"],
         ["   1. hardware_type - Select from dropdown or enter exact name from list below"],
-        ["   2. serial_number - Unique serial number (must not exist in system)"],
-        ["   3. model_name - Model name/number of the hardware"],
-        [""],
-        ["🔸 OPTIONAL COLUMN:"],
-        ["   4. brand - Manufacturer brand (Dell, HP, Lenovo, Cisco, etc.)"],
+        ["   2. asset_number - Unique asset tag number (must not exist in system)"],
+        ["   3. serial_number - Unique serial number (must not exist in system)"],
         [""],
         ["⚠️ IMPORTANT NOTES:"],
-        ["   • Serial numbers must be unique across entire system"],
         ["   • Hardware types must already exist (see complete list below)"],
+        ["   • Asset numbers must be unique across entire system"],
+        ["   • Serial numbers must be unique across entire system"],
         ["   • Hardware will be added with 'Available' status"],
         ["   • Do not modify the column headers"],
         ["   • Remove example rows before importing"],
@@ -2181,7 +2177,6 @@ def download_hardware_template(request):
         [""],
     ]
     
-    # Add ALL hardware types to notes with their counts
     notes.append(["   " + "=" * 70])
     notes.append(["   {:.<30} {:.<20}".format("HARDWARE TYPE", "DESCRIPTION")])
     notes.append(["   " + "-" * 70])
@@ -2194,23 +2189,20 @@ def download_hardware_template(request):
     notes.append([f"   Total Hardware Types: {hardware_types.count()}"])
     
     notes.append([""])
-    notes.append(["📝 HOW TO USE THIS TEMPLATE:"])
-    notes.append(["   1. Enter your hardware data in the 'Hardware Template' sheet"])
-    notes.append(["   2. For hardware_type, use the dropdown or type from the list above"])
-    notes.append(["   3. Each hardware item needs a unique serial number"])
-    notes.append(["   4. Fill in model_name (required) and brand (optional)"])
-    notes.append(["   5. Remove the example rows (rows 2-11) before importing"])
-    notes.append(["   6. Save the file and upload it to the system"])
+    notes.append(["📝 ASSET NUMBER FORMAT SUGGESTION:"])
+    notes.append(["   • AST-0001, AST-0002, etc."])
+    notes.append(["   • ORG-HW-001, ORG-HW-002, etc."])
+    notes.append(["   • Use any format as long as it's unique"])
     notes.append([""])
     notes.append(["✅ EXAMPLE:"])
-    notes.append(["   Row 2 shows: Laptop with serial number LAP-001"])
+    notes.append(["   Row 2 shows: Laptop | AST-0001 | LAP-001"])
     notes.append(["   Replace with your actual data"])
     notes.append([""])
     notes.append(["❌ COMMON ERRORS TO AVOID:"])
-    notes.append(["   • Duplicate serial numbers - each must be unique"])
     notes.append(["   • Invalid hardware type name - must match exactly from list"])
-    notes.append(["   • Empty required fields - hardware_type, serial_number, model_name are mandatory"])
-    notes.append(["   • Special characters in serial numbers - use letters, numbers, and hyphens only"])
+    notes.append(["   • Duplicate asset numbers - each must be unique"])
+    notes.append(["   • Duplicate serial numbers - each must be unique"])
+    notes.append(["   • Empty required fields - all required columns must be filled"])
     notes.append([""])
     notes.append(["📧 Need Help? Contact your system administrator"])
     
@@ -2248,7 +2240,7 @@ def download_hardware_template(request):
                 max_notes_length = max(max_notes_length, len(str(cell)))
     ws_notes.column_dimensions['A'].width = min(max_notes_length + 5, 100)
     
-    # Hide the HardwareTypesList sheet (optional - makes it cleaner)
+    # Hide the HardwareTypesList sheet
     ws_types_list.sheet_state = 'hidden'
     
     # Prepare response
@@ -2262,6 +2254,7 @@ def download_hardware_template(request):
     
     wb.save(response)
     return response
+
 
 @login_required
 def edit_hardware(request, hardware_id):
