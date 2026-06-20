@@ -1842,6 +1842,12 @@ from django.core.paginator import Paginator
 from django.db.models import Q, Count
 
 @login_required
+
+from django.core.paginator import Paginator
+from django.db.models import Q
+from django.core.paginator import Paginator
+from django.db.models import Q, Count
+@login_required
 def manage_hardware(request):
     if request.user.user_type != 'manager':
         return redirect('employee_dashboard')
@@ -1860,9 +1866,8 @@ def manage_hardware(request):
     search_query = request.GET.get('search', '')
     if search_query:
         hardware_items = hardware_items.filter(
+            Q(asset_number__icontains=search_query) |
             Q(serial_number__icontains=search_query) |
-            Q(model_name__icontains=search_query) |
-            Q(brand__icontains=search_query) |
             Q(hardware_type__name__icontains=search_query)
         )
     
