@@ -4066,6 +4066,7 @@ def employee_dashboard(request):
         'employee_name': employee_name,  
     }
     return render(request, 'employee/dashboard.html', context)
+
 @login_required
 def view_my_assignments(request):
     if request.user.user_type != 'employee':
@@ -4076,23 +4077,22 @@ def view_my_assignments(request):
     for assignment in assignments:
         items = HardwareAssignmentItem.objects.filter(assignment=assignment)
         assignment.total_items = items.count()
-        assignment.pending_serial_count = 0  
-        assignment.entered_serial_count = 0  
-        assignment.verified_serial_count = 0  
+        assignment.pending_asset_count = 0  
+        assignment.entered_asset_count = 0  
+        assignment.verified_asset_count = 0  
         
         for item in items:
-            if hasattr(item, 'serial_entry'):
-                assignment.entered_serial_count += 1
-                if item.serial_entry.verified:
-                    assignment.verified_serial_count += 1
+            if hasattr(item, 'asset_entry'):
+                assignment.entered_asset_count += 1
+                if item.asset_entry.verified:
+                    assignment.verified_asset_count += 1
             else:
-                assignment.pending_serial_count += 1
+                assignment.pending_asset_count += 1
     
     context = {
         'assignments': assignments,
     }
     return render(request, 'employee/view_my_assignments.html', context)
-
 
 
 @login_required
