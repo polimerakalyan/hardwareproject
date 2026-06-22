@@ -2,12 +2,12 @@
 {% block title %}Verification Status - Eduquity Hardware Management{% endblock %}
 
 {% block page_title %}Hardware Verification Status{% endblock %}
-{% block page_subtitle %}Monitor employee hardware verification across all assignments{% endblock %}
+{% block page_subtitle %}Monitor employee hardware asset verification across all assignments{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-end gap-2 mb-4">
     <a href="{% url 'view_serial_entries' %}" class="btn btn-outline-primary">
-        <i class="bi bi-upc-scan me-2"></i>Serial Entries
+        <i class="bi bi-upc-scan me-2"></i>Asset Entries
     </a>
     <a href="{% url 'view_assignments' %}" class="btn btn-outline-secondary">
         <i class="bi bi-arrow-left me-2"></i>Back to Assignments
@@ -85,7 +85,7 @@
                     </div>
                 </div>
                 <div class="mt-3">
-                    <span class="text-muted small">Serial mismatch</span>
+                    <span class="text-muted small">Asset mismatch</span>
                 </div>
             </div>
         </div>
@@ -140,7 +140,7 @@
                     <tr>
                         <td class="px-3">
                             <div class="d-flex align-items-center">
-                                <div class="rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 36px; height: 36px;">
+                                <div class="rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 36px; height: 36px; background: #f0f0f0;">
                                     <span class="fw-bold text-primary">{{ assignment.employee.get_full_name|default:assignment.employee.username|first|upper }}</span>
                                 </div>
                                 <strong>{{ assignment.employee.get_full_name|default:assignment.employee.username }}</strong>
@@ -206,17 +206,17 @@
                                 </span>
                                 {% endif %}
                                 {% if assignment.verification_stats.matched > 0 %}
-                                <span class="badge bg-info text-white px-2 py-1" title="Serials match - Ready to verify">
+                                <span class="badge bg-info text-white px-2 py-1" title="Asset numbers match - Ready to verify">
                                     <i class="bi bi-check2 me-1"></i>{{ assignment.verification_stats.matched }}
                                 </span>
                                 {% endif %}
                                 {% if assignment.verification_stats.mismatch > 0 %}
-                                <span class="badge bg-danger text-white px-2 py-1" title="Serial numbers don't match">
+                                <span class="badge bg-danger text-white px-2 py-1" title="Asset numbers don't match">
                                     <i class="bi bi-x-circle me-1"></i>{{ assignment.verification_stats.mismatch }}
                                 </span>
                                 {% endif %}
                                 {% if assignment.verification_stats.pending > 0 %}
-                                <span class="badge bg-secondary text-white px-2 py-1" title="No serial entered yet">
+                                <span class="badge bg-secondary text-white px-2 py-1" title="No asset entered yet">
                                     <i class="bi bi-clock me-1"></i>{{ assignment.verification_stats.pending }}
                                 </span>
                                 {% endif %}
@@ -231,7 +231,7 @@
                                 </a>
                                 <a href="{% url 'view_serial_entries' %}" 
                                    class="btn btn-sm btn-outline-primary"
-                                   title="Serial Entries">
+                                   title="Asset Entries">
                                     <i class="bi bi-upc-scan"></i>
                                 </a>
                             </div>
@@ -304,7 +304,7 @@
             <div class="card-body p-0">
                 <div class="list-group list-group-flush">
                     {% for assignment in assignments %}
-                        {% if assignment.verification_stats.matched > 0 %}
+                        {% if assignment.verification_stats.matched > 0 and assignment.verification_stats.verified < assignment.verification_stats.total %}
                         <div class="list-group-item border-0 d-flex justify-content-between align-items-center py-3">
                             <div>
                                 <div class="d-flex align-items-center">
