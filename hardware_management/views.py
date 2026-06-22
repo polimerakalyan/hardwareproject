@@ -4943,6 +4943,7 @@ def reset_password(request, token):
         messages.error(request, 'Invalid reset link.')
         return redirect('forgot_password')
     
+
 @login_required
 def my_hardware(request):
     if request.user.user_type != 'employee':
@@ -4976,36 +4977,41 @@ def my_hardware(request):
         assignment.items_list = []  
         
         for item in items:
+            # Get asset number (expected) and serial number (reference)
+            expected_asset = item.hardware.asset_number if item.hardware.asset_number else 'N/A'
+            
             hardware_data = {
                 'id': item.id,
                 'hardware_type': item.hardware.hardware_type.name,
                 'model': item.hardware.model_name,
                 'brand': item.hardware.brand,
-                'expected_serial': item.hardware.serial_number,
+                'expected_asset': expected_asset,
+                'serial_number': item.hardware.serial_number,  # Display this instead
                 'status': item.hardware.status,
             }
             
             try:
-                serial_entry = HardwareSerialEntry.objects.get(assignment_item=item)
-                hardware_data['serial_number'] = serial_entry.serial_number
-                hardware_data['verified'] = serial_entry.verified
-                hardware_data['verified_by'] = serial_entry.verified_by
-                hardware_data['verified_at'] = serial_entry.verified_at
-                hardware_data['entered_at'] = serial_entry.entered_at
+                # FIX: Use asset_entry instead of serial_entry
+                asset_entry = item.asset_entry
+                hardware_data['entered_asset'] = asset_entry.entered_asset_number
+                hardware_data['verified'] = asset_entry.verified
+                hardware_data['verified_by'] = asset_entry.verified_by
+                hardware_data['verified_at'] = asset_entry.verified_at
+                hardware_data['entered_at'] = asset_entry.entered_at
                 
-                if serial_entry.verified:
+                if asset_entry.verified:
                     assignment.verified_count += 1
                     verified_count += 1
                 else:
-                    if serial_entry.serial_number == item.hardware.serial_number:
+                    if asset_entry.entered_asset_number == expected_asset:
                         assignment.matched_count += 1
                         matched_count += 1
                     else:
                         assignment.mismatch_count += 1
                         mismatch_count += 1
                         
-            except HardwareSerialEntry.DoesNotExist:
-                hardware_data['serial_number'] = None
+            except HardwareAssetEntry.DoesNotExist:
+                hardware_data['entered_asset'] = None
                 hardware_data['verified'] = False
                 assignment.pending_count += 1
                 pending_count += 1
@@ -5026,7 +5032,7 @@ def my_hardware(request):
         'active_assignments': active_assignments.count(),
     }
     return render(request, 'employee/my_hardware.html', context)
-
+    
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
