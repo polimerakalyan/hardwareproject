@@ -3208,6 +3208,7 @@ def return_assignment(request, assignment_id):
 
 # ============== SERIAL NUMBER VIEWS ==============
 
+
 @login_required
 def view_serial_entries(request):
     if request.user.user_type != 'manager':
@@ -3218,8 +3219,8 @@ def view_serial_entries(request):
         actual_return_date__isnull=True
     ).prefetch_related(
         'hardwareassignmentitem_set__hardware__hardware_type',
-        'hardwareassignmentitem_set__serial_entry__entered_by',
-        'hardwareassignmentitem_set__serial_entry__verified_by'
+        'hardwareassignmentitem_set__asset_entry__entered_by',  # This is correct - using related_name
+        'hardwareassignmentitem_set__asset_entry__verified_by'
     ).order_by('-assigned_date')
     
     total_verified = 0
@@ -3234,31 +3235,39 @@ def view_serial_entries(request):
         assignment.matched_count = 0
         assignment.mismatch_count = 0
         assignment.pending_count = 0
-        assignment.serial_entries = []
+        assignment.asset_entries = []
         
         for item in items:
+            expected_asset = item.hardware.asset_number if item.hardware.asset_number else 'N/A'
+            
             try:
-                serial_entry = item.serial_entry
-                is_match = serial_entry.serial_number == item.hardware.serial_number
+                # CRITICAL FIX: Use the correct field name
+                # The model has hardware_item, but related_name is 'asset_entry'
+                # So we access it as item.asset_entry (using related_name)
+                asset_entry = item.asset_entry  # This works because related_name='asset_entry'
+                
+                # Check if entered asset number matches expected asset number
+                is_match = (asset_entry.entered_asset_number == expected_asset)
                 
                 entry_data = {
-                    'id': serial_entry.id,
+                    'id': asset_entry.id,
                     'item_id': item.id,
-                    'serial_number': serial_entry.serial_number,
-                    'expected_serial': item.hardware.serial_number,
+                    'entered_asset_number': asset_entry.entered_asset_number,
+                    'expected_asset': expected_asset,
                     'hardware_type': item.hardware.hardware_type.name,
                     'model': item.hardware.model_name,
-                    'entered_by': serial_entry.entered_by,
-                    'entered_at': serial_entry.entered_at,
-                    'verified': serial_entry.verified,
-                    'verified_by': serial_entry.verified_by,
-                    'verified_at': serial_entry.verified_at,
+                    'asset_number': expected_asset,
+                    'entered_by': asset_entry.entered_by,
+                    'entered_at': asset_entry.entered_at,
+                    'verified': asset_entry.verified,
+                    'verified_by': asset_entry.verified_by,
+                    'verified_at': asset_entry.verified_at,
                     'is_match': is_match,
-                    'match_status': 'verified' if serial_entry.verified else ('matched' if is_match else 'mismatch'),
+                    'match_status': 'verified' if asset_entry.verified else ('matched' if is_match else 'mismatch'),
                 }
-                assignment.serial_entries.append(entry_data)
+                assignment.asset_entries.append(entry_data)
                 
-                if serial_entry.verified:
+                if asset_entry.verified:
                     assignment.verified_count += 1
                     total_verified += 1
                 else:
@@ -3269,14 +3278,15 @@ def view_serial_entries(request):
                         assignment.mismatch_count += 1
                         total_mismatch += 1
                         
-            except HardwareSerialEntry.DoesNotExist:
+            except HardwareAssetEntry.DoesNotExist:
                 entry_data = {
                     'id': None,
                     'item_id': item.id,
-                    'serial_number': None,
-                    'expected_serial': item.hardware.serial_number,
+                    'entered_asset_number': None,
+                    'expected_asset': expected_asset,
                     'hardware_type': item.hardware.hardware_type.name,
                     'model': item.hardware.model_name,
+                    'asset_number': expected_asset,
                     'entered_by': None,
                     'entered_at': None,
                     'verified': False,
@@ -3285,7 +3295,7 @@ def view_serial_entries(request):
                     'is_match': False,
                     'match_status': 'pending',
                 }
-                assignment.serial_entries.append(entry_data)
+                assignment.asset_entries.append(entry_data)
                 assignment.pending_count += 1
                 total_pending += 1
     
@@ -3299,7 +3309,7 @@ def view_serial_entries(request):
         'total_mismatch': total_mismatch,
         'total_pending': total_pending,
     }
-    return render(request, 'manager/view_serial_entries.html', context)
+    return render(request, 'manager/view_asset_entries.html', context)
 
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
