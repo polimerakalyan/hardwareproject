@@ -3597,6 +3597,50 @@ def export_all_employees_hardware(request):
 
 
 @login_required
+def verify_asset_entry(request, entry_id):
+    """
+    Verify a single asset entry
+    """
+    if request.user.user_type != 'manager':
+        return redirect('employee_dashboard')
+    
+    asset_entry = get_object_or_404(HardwareAssetEntry, id=entry_id)
+    
+    # FIX: Use 'hardware_item' instead of 'assignment_item'
+    if asset_entry.hardware_item.assignment.assigned_by != request.user:
+        messages.error(request, 'Unauthorized access!')
+        return redirect('view_serial_entries')
+    
+    # Check if entered asset number matches expected asset number
+    expected_asset = asset_entry.hardware_item.hardware.asset_number
+    is_match = asset_entry.entered_asset_number == expected_asset
+    
+    if is_match:
+        # Mark as verified
+        asset_entry.verified = True
+        asset_entry.verified_by = request.user
+        asset_entry.verified_at = timezone.now()
+        asset_entry.save()
+        
+        # Update hardware status
+        hardware = asset_entry.hardware_item.hardware
+        hardware.status = 'in_use'
+        hardware.save()
+        
+        messages.success(
+            request, 
+            f'Asset entry verified successfully! Asset {asset_entry.entered_asset_number} is now marked as in use.'
+        )
+    else:
+        messages.error(
+            request, 
+            f'Cannot verify - Entered asset number "{asset_entry.entered_asset_number}" does not match expected asset number "{expected_asset}"!'
+        )
+    
+    return redirect('view_serial_entries')
+
+
+@login_required
 def verify_serial_entry(request, entry_id):
     if request.user.user_type != 'manager':
         return redirect('employee_dashboard')
@@ -3626,9 +3670,12 @@ def verify_serial_entry(request, entry_id):
     return redirect('view_serial_entries')
 
 
+
 @login_required
 def verify_all_employee_entries(request, assignment_id):
-    """Single click verify all pending entries for an employee"""
+    """
+    Single click verify all pending asset entries for an employee
+    """
     if request.user.user_type != 'manager':
         return redirect('employee_dashboard')
     
@@ -3643,57 +3690,86 @@ def verify_all_employee_entries(request, assignment_id):
     verified_count = 0
     skipped_count = 0
     mismatch_count = 0
+    no_entry_count = 0
     
     for item in items:
         try:
-            serial_entry = HardwareSerialEntry.objects.get(assignment_item=item)
-            is_match = serial_entry.serial_number == item.hardware.serial_number
+            # Get the asset entry
+            asset_entry = item.asset_entry
+            expected_asset = item.hardware.asset_number if item.hardware.asset_number else 'N/A'
+            is_match = asset_entry.entered_asset_number == expected_asset
             
-            if not serial_entry.verified and is_match:
-                serial_entry.verified = True
-                serial_entry.verified_by = request.user
-                serial_entry.verified_at = timezone.now()
-                serial_entry.save()
+            if not asset_entry.verified and is_match:
+                # Verify this entry
+                asset_entry.verified = True
+                asset_entry.verified_by = request.user
+                asset_entry.verified_at = timezone.now()
+                asset_entry.save()
                 
+                # Update hardware status
                 item.hardware.status = 'in_use'
                 item.hardware.save()
                 verified_count += 1
-            elif serial_entry.verified:
+                
+            elif asset_entry.verified:
                 skipped_count += 1
-            elif not is_match:
+                
+            elif not is_match and asset_entry.entered_asset_number:
                 mismatch_count += 1
-        except HardwareSerialEntry.DoesNotExist:
+                
+        except HardwareAssetEntry.DoesNotExist:
+            no_entry_count += 1
             continue
     
     employee_name = assignment.employee.get_full_name() or assignment.employee.username
     
+    # Build response messages
     if verified_count > 0:
         messages.success(
             request, 
-            f'Successfully verified {verified_count} hardware item(s) for {employee_name}!'
+            f'✅ Successfully verified {verified_count} asset(s) for {employee_name}!'
         )
+        
         if mismatch_count > 0:
             messages.warning(
                 request,
-                f'Skipped {mismatch_count} item(s) with serial mismatch for {employee_name}.'
+                f'⚠️ Skipped {mismatch_count} item(s) with asset number mismatch for {employee_name}.'
             )
+            
         if skipped_count > 0:
             messages.info(
                 request,
-                f'{skipped_count} item(s) were already verified.'
+                f'ℹ️ {skipped_count} item(s) were already verified.'
+            )
+            
+        if no_entry_count > 0:
+            messages.info(
+                request,
+                f'ℹ️ {no_entry_count} item(s) have no asset entry yet.'
             )
     else:
-        if mismatch_count > 0:
+        if mismatch_count > 0 and no_entry_count == 0:
             messages.error(
                 request, 
-                f'No items verified. Found {mismatch_count} item(s) with serial mismatch for {employee_name}.'
+                f'❌ No items verified. Found {mismatch_count} item(s) with asset number mismatch for {employee_name}.'
+            )
+        elif skipped_count > 0 and mismatch_count == 0 and no_entry_count == 0:
+            messages.warning(
+                request, 
+                f'ℹ️ All {skipped_count} item(s) are already verified for {employee_name}.'
+            )
+        elif no_entry_count > 0 and mismatch_count == 0 and skipped_count == 0:
+            messages.warning(
+                request, 
+                f'ℹ️ No asset entries found for {employee_name}. Employee needs to enter asset numbers first.'
             )
         else:
             messages.warning(
                 request, 
-                f'No eligible items found for verification for {employee_name}.'
+                f'⚠️ No eligible items found for verification for {employee_name}. Items must have matching asset numbers and not be already verified.'
             )
     
+    # Redirect to the asset entries view
     return redirect('view_serial_entries')
 
 @login_required
