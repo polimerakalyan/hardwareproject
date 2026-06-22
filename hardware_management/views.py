@@ -2008,7 +2008,7 @@ def manage_hardware(request):
     register.filter('get_item', lambda d, key: d.get(key, 0))
     
     context = {
-        'hardware_types': hardware_types,
+        'hardware_types': hardware_types, 
         'hardware_items': page_obj,
         'hardware_items_count_dict': hardware_items_count_dict,
         'available_count': available_count,
