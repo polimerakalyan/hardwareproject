@@ -116,15 +116,19 @@
                             {% if transfer.status == 'requested' %}
                                 <span class="badge bg-warning">Pending Approval</span>
                             {% elif transfer.status == 'approved_by_manager' %}
-                                <span class="badge bg-info">Approved - Ready to Send</span>
+                                <span class="badge bg-info">Approved</span>
                             {% elif transfer.status == 'in_transit' %}
                                 <span class="badge bg-primary">In Transit</span>
                             {% elif transfer.status == 'received_by_receiver' %}
-                                <span class="badge bg-success">Received by Employee</span>
+                                <span class="badge bg-secondary">Received</span>
+                            {% elif transfer.status == 'return_completed' %}
+                                <span class="badge bg-purple" style="background-color: purple;">Returned</span>
                             {% elif transfer.status == 'completed' %}
                                 <span class="badge bg-success">Completed</span>
                             {% elif transfer.status == 'rejected' %}
                                 <span class="badge bg-danger">Rejected</span>
+                            {% elif transfer.status == 'cancelled' %}
+                                <span class="badge bg-dark">Cancelled</span>
                             {% endif %}
                         </td>
                         <td>{{ transfer.requested_date|date:"d/m/Y" }}</td>
