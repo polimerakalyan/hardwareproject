@@ -3341,6 +3341,204 @@ def return_assignment(request, assignment_id):
         'today': timezone.now().date(),
     }
     return render(request, 'manager/return_assignment.html', context)
+
+
+
+def send_return_confirmation_email(assignment, items):
+    """Send return confirmation email to employee"""
+    from django.core.mail import send_mail
+    from django.conf import settings
+    
+    employee = assignment.employee
+    employee_name = employee.get_full_name() or employee.username
+    manager_name = assignment.assigned_by.get_full_name() or assignment.assigned_by.username
+    
+    # Build hardware list for email
+    hardware_list_html = ''
+    hardware_list_text = ''
+    for idx, item in enumerate(items, 1):
+        asset_number = item.hardware.asset_number if item.hardware.asset_number else 'N/A'
+        hw_type = item.hardware.hardware_type.name
+        condition = item.condition_at_return or 'Good condition'
+        
+        hardware_list_html += f"""
+            <tr>
+                <td style="padding: 8px 12px; border-bottom: 1px solid #e9ecef;">{idx}</td>
+                <td style="padding: 8px 12px; border-bottom: 1px solid #e9ecef;"><strong>{hw_type}</strong></td>
+                <td style="padding: 8px 12px; border-bottom: 1px solid #e9ecef;"><code style="background: #f8f9fa; padding: 2px 6px; border-radius: 4px;">{asset_number}</code></td>
+                <td style="padding: 8px 12px; border-bottom: 1px solid #e9ecef;">{condition}</td>
+            </tr>
+        """
+        hardware_list_text += f"{idx}. {hw_type} - Asset: {asset_number} | Condition: {condition}\n"
+    
+    subject = f'Hardware Return Confirmation - {assignment.project.project_name}'
+    
+    html_message = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body {{ font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; }}
+            .container {{ max-width: 700px; margin: 0 auto; padding: 20px; }}
+            .header {{ background: linear-gradient(90deg, #28a745 0%, #20c997 100%); color: white; padding: 25px; text-align: center; border-radius: 8px 8px 0 0; }}
+            .header h2 {{ margin: 0; font-weight: 300; }}
+            .content {{ background: #ffffff; padding: 30px; border: 1px solid #e9ecef; border-top: none; border-radius: 0 0 8px 8px; }}
+            .info-box {{ background: #f8f9fa; padding: 15px 20px; margin: 15px 0; border-radius: 6px; border-left: 4px solid #28a745; }}
+            .info-box h6 {{ margin: 0 0 5px 0; color: #495057; }}
+            .table {{ width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 14px; }}
+            .table th {{ background: #28a745; color: white; padding: 10px 12px; text-align: left; }}
+            .table td {{ padding: 10px 12px; border-bottom: 1px solid #e9ecef; }}
+            .table tr:hover {{ background: #f8f9fa; }}
+            .badge {{ display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }}
+            .badge-success {{ background: #28a745; color: white; }}
+            .badge-info {{ background: #17a2b8; color: white; }}
+            .badge-warning {{ background: #ffc107; color: #212529; }}
+            .footer {{ margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef; color: #6c757d; font-size: 12px; text-align: center; }}
+            .btn {{ display: inline-block; padding: 10px 24px; background: linear-gradient(90deg, #28a745 0%, #20c997 100%); color: white; text-decoration: none; border-radius: 6px; margin: 10px 0; }}
+            .btn:hover {{ opacity: 0.9; }}
+            .alert {{ padding: 12px 16px; border-radius: 6px; margin: 10px 0; }}
+            .alert-success {{ background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }}
+            .alert-info {{ background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }}
+            code {{ background: #f8f9fa; padding: 2px 6px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 13px; }}
+            @media (max-width: 600px) {{
+                .table {{ font-size: 12px; }}
+                .table th, .table td {{ padding: 6px 8px; }}
+                .content {{ padding: 15px; }}
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h2>✅ Hardware Return Confirmation</h2>
+            </div>
+            <div class="content">
+                <p>Dear <strong>{employee_name}</strong>,</p>
+                
+                <div class="alert alert-success">
+                    <strong>✅ Assignment Returned Successfully!</strong>
+                    <br>
+                    All hardware items have been returned and verified by <strong>{manager_name}</strong>.
+                </div>
+                
+                <div class="info-box">
+                    <h6>📌 Assignment Information</h6>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                        <tr>
+                            <td style="padding: 4px 0; width: 35%;"><strong>Assignment ID:</strong></td>
+                            <td style="padding: 4px 0;"><code>{assignment.assignment_id}</code></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 4px 0;"><strong>Project:</strong></td>
+                            <td style="padding: 4px 0;">{assignment.project.project_name} ({assignment.project.project_id})</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 4px 0;"><strong>Exam City:</strong></td>
+                            <td style="padding: 4px 0;"><span class="badge badge-info">{assignment.exam_city}</span></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 4px 0;"><strong>Return Date:</strong></td>
+                            <td style="padding: 4px 0;"><span class="badge badge-success">{assignment.actual_return_date.strftime('%d %B %Y')}</span></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 4px 0;"><strong>Verified By:</strong></td>
+                            <td style="padding: 4px 0;">{manager_name}</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <h6 style="margin-top: 20px; margin-bottom: 10px;">🖥️ Returned Hardware Items</h6>
+                <div style="overflow-x: auto;">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;">#</th>
+                                <th>Hardware Type</th>
+                                <th>Asset Number</th>
+                                <th>Condition at Return</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {hardware_list_html}
+                        </tbody>
+                    </table>
+                </div>
+                <p style="margin: 10px 0;"><span class="badge badge-success">Total Items Returned: {len(items)}</span></p>
+                
+                <div class="alert alert-info">
+                    <strong>📌 What's Next:</strong>
+                    <ul style="margin: 8px 0 0 20px;">
+                        <li>You have successfully completed this assignment</li>
+                        <li>All hardware has been returned and marked as <strong>Available</strong></li>
+                        <li>You can view your completed assignments in the portal</li>
+                        <li>Thank you for taking care of the hardware</li>
+                    </ul>
+                </div>
+                
+                <p style="margin-top: 20px;">
+                    <a href="http://eduquityinventory.co.in/" class="btn">🚀 Go to Hardware Portal</a>
+                </p>
+                
+                <div class="footer">
+                    <p><strong>Eduquity Hardware Management Team</strong><br>
+                    Established in 2000 - Thought-leader in the Indian assessment industry</p>
+                    <p><em>This is an automated email. Please do not reply to this message.</em></p>
+                    <p style="font-size: 11px;">For any questions, please contact your manager: {manager_name}</p>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    plain_message = f"""
+    HARDWARE RETURN CONFIRMATION
+    ============================
+    
+    Dear {employee_name},
+    
+    ✅ Assignment Returned Successfully!
+    
+    All hardware items have been returned and verified by {manager_name}.
+    
+    Assignment Information:
+    -----------------------
+    Assignment ID: {assignment.assignment_id}
+    Project: {assignment.project.project_name} ({assignment.project.project_id})
+    Exam City: {assignment.exam_city}
+    Return Date: {assignment.actual_return_date.strftime('%d %B %Y')}
+    Verified By: {manager_name}
+    
+    Returned Hardware Items:
+    -----------------------
+    {hardware_list_text}
+    
+    Total Items Returned: {len(items)}
+    
+    What's Next:
+    -----------
+    - You have successfully completed this assignment
+    - All hardware has been returned and marked as Available
+    - You can view your completed assignments in the portal
+    - Thank you for taking care of the hardware
+    
+    For any questions, please contact your manager: {manager_name}
+    
+    ---
+    Eduquity Hardware Management Team
+    """
+    
+    send_mail(
+        subject=subject,
+        message=plain_message,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[employee.email],
+        html_message=html_message,
+        fail_silently=False,
+    )
+
 # ============== SERIAL NUMBER VIEWS ==============
 
 
