@@ -5872,6 +5872,7 @@ def my_transfers(request):
     return render(request, 'employee/my_transfers.html', context)
 
 
+
 @login_required
 def transfer_tracking(request, transfer_id):
     """Track transfer details and status"""
