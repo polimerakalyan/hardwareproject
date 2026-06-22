@@ -3772,6 +3772,7 @@ def verify_all_employee_entries(request, assignment_id):
     # Redirect to the asset entries view
     return redirect('view_serial_entries')
 
+
 @login_required
 def manager_verification_status(request):
     """Manager dashboard to see verification status across all assignments"""
@@ -3798,15 +3799,19 @@ def manager_verification_status(request):
         
         for item in items:
             try:
-                serial_entry = HardwareSerialEntry.objects.get(assignment_item=item)
-                if serial_entry.verified:
+                # FIX: Use asset_entry instead of serial_entry
+                asset_entry = item.asset_entry
+                expected_asset = item.hardware.asset_number if item.hardware.asset_number else 'N/A'
+                is_match = (asset_entry.entered_asset_number == expected_asset)
+                
+                if asset_entry.verified:
                     verified_items += 1
                 else:
-                    if serial_entry.serial_number == item.hardware.serial_number:
+                    if is_match:
                         matched_items += 1
                     else:
                         mismatch_items += 1
-            except HardwareSerialEntry.DoesNotExist:
+            except HardwareAssetEntry.DoesNotExist:
                 pending_items += 1
         
         verified_percentage = (verified_items / total_items * 100) if total_items > 0 else 0
@@ -3841,7 +3846,6 @@ def manager_verification_status(request):
         'today': timezone.now().date(),
     }
     return render(request, 'manager/verification_status.html', context)
-
 @login_required
 def manager_verification_details(request, assignment_id):
     """Manager view to see detailed verification status for an assignment"""
@@ -3855,37 +3859,43 @@ def manager_verification_details(request, assignment_id):
         actual_return_date__isnull=True
     )
     
-    items = HardwareAssignmentItem.objects.filter(assignment=assignment)
+    items = HardwareAssignmentItem.objects.filter(assignment=assignment).select_related('hardware__hardware_type')
     
     verification_details = []
     all_verified = True
     
     for item in items:
+        # Get asset number
+        expected_asset = item.hardware.asset_number if item.hardware.asset_number else 'N/A'
+        
         try:
-            serial_entry = HardwareSerialEntry.objects.get(assignment_item=item)
-            is_match = serial_entry.serial_number == item.hardware.serial_number
+            # FIX: Use asset_entry instead of serial_entry
+            asset_entry = item.asset_entry
+            # Check if entered value matches asset number
+            is_match = (asset_entry.entered_asset_number == expected_asset)
+            
             verification_details.append({
                 'item': item,
-                'serial_entry': serial_entry,
-                'is_match': is_match,  
-                'entered_serial': serial_entry.serial_number,
-                'expected_serial': item.hardware.serial_number,
+                'asset_entry': asset_entry,
+                'is_match': is_match,
+                'entered_asset': asset_entry.entered_asset_number,
+                'expected_asset': expected_asset,
                 'hardware_type': item.hardware.hardware_type.name,
                 'model': item.hardware.model_name,
-                'entered_by': serial_entry.entered_by,
-                'entered_at': serial_entry.entered_at,
-                'verified_at': serial_entry.verified_at,
-                'verified_by': serial_entry.verified_by
+                'entered_by': asset_entry.entered_by,
+                'entered_at': asset_entry.entered_at,
+                'verified_at': asset_entry.verified_at,
+                'verified_by': asset_entry.verified_by
             })
             if not is_match:
                 all_verified = False
-        except HardwareSerialEntry.DoesNotExist:
+        except HardwareAssetEntry.DoesNotExist:
             verification_details.append({
                 'item': item,
-                'serial_entry': None,
+                'asset_entry': None,
                 'is_match': False,
-                'entered_serial': None,
-                'expected_serial': item.hardware.serial_number,
+                'entered_asset': None,
+                'expected_asset': expected_asset,
                 'hardware_type': item.hardware.hardware_type.name,
                 'model': item.hardware.model_name,
                 'entered_by': None,
@@ -3896,9 +3906,9 @@ def manager_verification_details(request, assignment_id):
             all_verified = False
     
     total_items = len(verification_details)
-    verified_count = sum(1 for d in verification_details if d['verified_at'] is not None)  
-    mismatch_count = sum(1 for d in verification_details if d['entered_serial'] and d['entered_serial'] != d['expected_serial'])
-    pending_count = sum(1 for d in verification_details if not d['entered_serial'])
+    verified_count = sum(1 for d in verification_details if d['verified_at'] is not None)
+    mismatch_count = sum(1 for d in verification_details if d['entered_asset'] and not d['is_match'])
+    pending_count = sum(1 for d in verification_details if not d['entered_asset'])
     
     context = {
         'assignment': assignment,
@@ -3911,6 +3921,8 @@ def manager_verification_details(request, assignment_id):
         'verified_percentage': (verified_count / total_items * 100) if total_items > 0 else 0,
     }
     return render(request, 'manager/verification_details.html', context)
+
+
 # ============== EMPLOYEE VIEWS ==============
 @login_required
 def employee_dashboard(request):
