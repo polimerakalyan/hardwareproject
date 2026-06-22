@@ -23,7 +23,7 @@ pipeline {
 
         stage('Run Container') {
             steps {
-                sh 'docker run -d -p 8000:8000 --name django-app django-app'
+                sh 'docker run -d --network app-network -p 8000:8000 --name django-app django-app'
             }
         }
     }
