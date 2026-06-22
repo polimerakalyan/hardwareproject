@@ -102,6 +102,7 @@
                                             </div>
                                         </th>
                                         <th>Hardware Type</th>
+                                        <th>Asset Number</th>
                                         <th>Serial Number</th>
                                         <th>Model</th>
                                         <th>Brand</th>
@@ -115,6 +116,7 @@
                                             <div class="form-check">
                                                 <input type="checkbox" class="form-check-input hardware-checkbox" 
                                                        name="hardware_ids" value="{{ hardware.id }}"
+                                                       data-asset="{{ hardware.asset_number }}"
                                                        data-serial="{{ hardware.serial_number }}"
                                                        data-type="{{ hardware.hardware_type }}"
                                                        data-model="{{ hardware.model_name }}"
@@ -122,6 +124,7 @@
                                             </div>
                                         </td>
                                         <td>{{ hardware.hardware_type }}</td>
+                                        <td><code class="asset-number">{{ hardware.asset_number }}</code></td>
                                         <td><code>{{ hardware.serial_number }}</code></td>
                                         <td>{{ hardware.model_name }}</td>
                                         <td>{{ hardware.brand|default:"-" }}</td>
@@ -129,7 +132,7 @@
                                     </tr>
                                     {% empty %}
                                     <tr>
-                                        <td colspan="6" class="text-center py-4">
+                                        <td colspan="7" class="text-center py-4">
                                             <i class="bi bi-inbox display-4 text-muted"></i>
                                             <p class="mt-2">No hardware items assigned to you</p>
                                         </td>
@@ -143,7 +146,7 @@
                         </div>
                     </div>
                     
-                    <!-- Selected Hardware Items Summary (MISSING SECTION - ADDED) -->
+                    <!-- Selected Hardware Items Summary -->
                     <div class="mb-4" id="selectedItemsSection" style="display: none;">
                         <label class="form-label fw-bold text-success">
                             <i class="bi bi-check-circle"></i> Selected Hardware Items to Transfer
@@ -154,6 +157,7 @@
                                     <tr>
                                         <th>#</th>
                                         <th>Hardware Type</th>
+                                        <th>Asset Number</th>
                                         <th>Serial Number</th>
                                         <th>Model</th>
                                         <th>Brand</th>
@@ -162,7 +166,7 @@
                                 </thead>
                                 <tbody id="selectedItemsBody">
                                     <tr>
-                                        <td colspan="6" class="text-center text-muted">No items selected</td>
+                                        <td colspan="7" class="text-center text-muted">No items selected</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -227,13 +231,15 @@
                 if (cb.checked) {
                     const row = cb.closest('tr');
                     const hardwareType = row.cells[1]?.innerText || '';
-                    const serialNumber = row.cells[2]?.innerText || '';
-                    const model = row.cells[3]?.innerText || '';
-                    const brand = row.cells[4]?.innerText || '';
-                    const location = row.cells[5]?.innerText || '';
+                    const assetNumber = row.cells[2]?.innerText || '';
+                    const serialNumber = row.cells[3]?.innerText || '';
+                    const model = row.cells[4]?.innerText || '';
+                    const brand = row.cells[5]?.innerText || '';
+                    const location = row.cells[6]?.innerText || '';
                     
                     selectedItems.push({
                         type: hardwareType,
+                        asset: assetNumber,
                         serial: serialNumber,
                         model: model,
                         brand: brand,
@@ -248,19 +254,20 @@
                 selectedItems.forEach((item, index) => {
                     html += `
                         <tr>
-                            <td>${index + 1}</td
-                            <td>${item.type}</td
-                            <td><code>${item.serial}</code></td
-                            <td>${item.model}</td
-                            <td>${item.brand}</td
-                            <td><span class="badge bg-info">${item.location}</span></td
-                         </tr
+                            <td>${index + 1}</td>
+                            <td>${item.type}</td>
+                            <td><code class="asset-number">${item.asset}</code></td>
+                            <td><code>${item.serial}</code></td>
+                            <td>${item.model}</td>
+                            <td>${item.brand}</td>
+                            <td><span class="badge bg-info">${item.location}</span></td>
+                        </tr>
                     `;
                 });
                 selectedItemsBody.innerHTML = html;
             } else {
                 selectedItemsSection.style.display = 'none';
-                selectedItemsBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No items selected</td></tr>';
+                selectedItemsBody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No items selected</td></tr>';
             }
         }
         
@@ -363,6 +370,14 @@
 </script>
 
 <style>
+    .asset-number {
+        background-color: #e7f1ff;
+        color: #0d6efd;
+        font-weight: 600;
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+    
     .table-success {
         background-color: #d1e7dd;
     }
@@ -375,6 +390,14 @@
     .form-check-input:checked {
         background-color: #198754;
         border-color: #198754;
+    }
+    
+    code {
+        background-color: #f8f9fa;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9em;
     }
 </style>
 {% endblock %}
