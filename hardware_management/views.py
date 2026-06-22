@@ -1964,12 +1964,6 @@ from django.core.paginator import Paginator
 from django.db.models import Q, Count
 
 @login_required
-
-from django.core.paginator import Paginator
-from django.db.models import Q
-from django.core.paginator import Paginator
-from django.db.models import Q, Count
-@login_required
 def manage_hardware(request):
     if request.user.user_type != 'manager':
         return redirect('employee_dashboard')
