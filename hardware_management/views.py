@@ -4138,6 +4138,7 @@ def my_assignment_details(request, assignment_id):
     return render(request, 'employee/my_assignment_details.html', context)
     
 
+
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
