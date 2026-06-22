@@ -1406,6 +1406,11 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from django.http import HttpResponse
 
+
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
+from django.http import HttpResponse
 @login_required
 def project_assignments(request, project_id):
     """View all employees assigned to a specific project"""
@@ -1421,7 +1426,8 @@ def project_assignments(request, project_id):
         actual_return_date__isnull=True
     ).select_related('employee').prefetch_related(
         'hardwareassignmentitem_set__hardware',
-        'hardwareassignmentitem_set__hardware__hardware_type'
+        'hardwareassignmentitem_set__hardware__hardware_type',
+        'hardwareassignmentitem_set__asset_entry'
     ).order_by('-assigned_date')
     
     total_hardware = 0
@@ -1439,6 +1445,9 @@ def project_assignments(request, project_id):
         item_count = hardware_items.count()
         total_hardware += item_count
         
+        # Get exam center name
+        exam_center_name = getattr(assignment, 'exam_center_name', None)
+        
         # Calculate hardware status counts and collect details
         for item in hardware_items:
             hardware = item.hardware
@@ -1450,17 +1459,22 @@ def project_assignments(request, project_id):
             elif hardware.status == 'assigned':
                 assigned_hardware += 1
             
-            # Get verification status
+            # Get verification status using asset_entry
             verification_status = 'Not Entered'
             verified = False
             try:
-                serial_entry = HardwareSerialEntry.objects.get(assignment_item=item)
-                if serial_entry.verified:
+                asset_entry = item.asset_entry
+                if asset_entry.verified:
                     verification_status = 'Verified'
                     verified = True
                 else:
-                    verification_status = 'Pending'
-            except HardwareSerialEntry.DoesNotExist:
+                    # Check if asset number matches
+                    expected_asset = hardware.asset_number if hardware.asset_number else 'N/A'
+                    if asset_entry.entered_asset_number == expected_asset:
+                        verification_status = 'Matched - Pending'
+                    else:
+                        verification_status = 'Mismatch'
+            except HardwareAssetEntry.DoesNotExist:
                 pass
             
             # Add to hardware details list for export
@@ -1468,11 +1482,14 @@ def project_assignments(request, project_id):
                 'employee_name': assignment.employee.get_full_name() or assignment.employee.username,
                 'employee_email': assignment.employee.email,
                 'exam_city': assignment.exam_city,
+                'exam_center_name': exam_center_name,
                 'hardware_type': hw_type,
                 'serial_number': hardware.serial_number,
                 'model': hardware.model_name,
                 'brand': hardware.brand or 'N/A',
                 'status': 'In Use' if hardware.status == 'in_use' else 'Assigned',
+                'asset_number': hardware.asset_number if hardware.asset_number else 'N/A',
+                'entered_asset': asset_entry.entered_asset_number if hasattr(item, 'asset_entry') and item.asset_entry else 'N/A',
                 'verification_status': verification_status,
                 'verified': verified,
                 'assigned_date': assignment.assigned_date.strftime('%d-%m-%Y'),
@@ -1486,21 +1503,27 @@ def project_assignments(request, project_id):
         # Check all hardware items for this assignment
         all_verified = True
         any_pending = False
+        any_mismatch = False
         
         for item in hardware_items:
             try:
-                serial_entry = HardwareSerialEntry.objects.get(assignment_item=item)
-                if serial_entry.verified:
+                asset_entry = item.asset_entry
+                if asset_entry.verified:
                     pass
                 else:
                     all_verified = False
                     any_pending = True
-            except HardwareSerialEntry.DoesNotExist:
+                    expected_asset = item.hardware.asset_number if item.hardware.asset_number else 'N/A'
+                    if asset_entry.entered_asset_number != expected_asset:
+                        any_mismatch = True
+            except HardwareAssetEntry.DoesNotExist:
                 all_verified = False
         
         if all_verified and hardware_items.exists():
             verified_emp = True
             verification_status_emp = 'verified'
+        elif any_mismatch:
+            verification_status_emp = 'mismatch'
         elif any_pending:
             verification_status_emp = 'pending'
         else:
@@ -1514,6 +1537,7 @@ def project_assignments(request, project_id):
                 'name': assignment.employee.get_full_name() or assignment.employee.username,
                 'email': assignment.employee.email,
                 'exam_city': assignment.exam_city,
+                'exam_center_name': exam_center_name,
                 'status': 'Active',
                 'verified': verified_emp,
                 'verification_status': verification_status_emp,
@@ -1527,6 +1551,9 @@ def project_assignments(request, project_id):
             if verification_status_emp == 'verified' and existing['verification_status'] != 'verified':
                 existing['verified'] = True
                 existing['verification_status'] = 'verified'
+            elif verification_status_emp == 'mismatch':
+                existing['verification_status'] = 'mismatch'
+                existing['verified'] = False
             elif verification_status_emp == 'pending' and existing['verification_status'] == 'not_entered':
                 existing['verification_status'] = 'pending'
     
