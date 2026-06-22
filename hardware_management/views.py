@@ -3254,13 +3254,19 @@ def assignment_details(request, assignment_id):
     }
     return render(request, 'manager/assignment_details.html', context)
     
+
 @login_required
 def return_assignment(request, assignment_id):
     if request.user.user_type != 'manager':
         return redirect('employee_dashboard')
     
     assignment = get_object_or_404(HardwareAssignment, id=assignment_id, assigned_by=request.user)
-    items = HardwareAssignmentItem.objects.filter(assignment=assignment)
+    items = HardwareAssignmentItem.objects.filter(assignment=assignment).select_related('hardware__hardware_type')
+    
+    # Add asset number to each item (primary identifier)
+    for item in items:
+        item.asset_number = item.hardware.asset_number if item.hardware.asset_number else 'N/A'
+        item.serial_number = item.hardware.serial_number
     
     if request.method == 'POST':
         verification_status = []
@@ -3269,20 +3275,21 @@ def return_assignment(request, assignment_id):
         missing_count = 0
         
         for item in items:
-            returned_serial = request.POST.get(f'returned_serial_{item.id}', '').strip()
+            returned_asset = request.POST.get(f'returned_asset_{item.id}', '').strip()
             condition_notes = request.POST.get(f'condition_notes_{item.id}', '')
             
-            if not returned_serial:
+            if not returned_asset:
                 missing_count += 1
                 all_verified = False
                 verification_status.append({
                     'item': item,
                     'status': 'missing',
-                    'message': 'Return serial number not entered'
+                    'message': f'Return Asset Number not entered for {item.hardware.hardware_type.name} (Asset: {item.asset_number})'
                 })
                 continue
             
-            is_match = (returned_serial == item.hardware.serial_number)
+            # Check if returned asset matches the assigned asset number (primary verification)
+            is_match = (returned_asset == item.asset_number)
             
             if not is_match:
                 mismatch_count += 1
@@ -3290,7 +3297,7 @@ def return_assignment(request, assignment_id):
                 verification_status.append({
                     'item': item,
                     'status': 'mismatch',
-                    'message': f'Returned serial "{returned_serial}" does not match assigned serial "{item.hardware.serial_number}"'
+                    'message': f'Returned Asset "{returned_asset}" does not match expected Asset "{item.asset_number}"'
                 })
             
             item.condition_at_return = condition_notes
@@ -3299,15 +3306,16 @@ def return_assignment(request, assignment_id):
         if not all_verified:
             error_messages = []
             if missing_count > 0:
-                error_messages.append(f'{missing_count} item(s) missing return serial numbers')
+                error_messages.append(f'{missing_count} item(s) missing return Asset Numbers')
             if mismatch_count > 0:
-                error_messages.append(f'{mismatch_count} item(s) have mismatched serial numbers')
+                error_messages.append(f'{mismatch_count} item(s) have mismatched Asset Numbers')
             
             messages.error(request, 'Return verification failed: ' + '; '.join(error_messages))
             
             request.session['verification_status'] = verification_status
             return redirect('return_assignment', assignment_id=assignment.id)
         
+        # Update hardware status to available
         for item in items:
             item.hardware.status = 'available'
             item.hardware.save()
@@ -3315,7 +3323,13 @@ def return_assignment(request, assignment_id):
         assignment.actual_return_date = timezone.now().date()
         assignment.save()
         
-        messages.success(request, f'Assignment returned successfully! All {items.count()} hardware items verified and marked as available.')
+        # Send email to employee about return
+        try:
+            send_return_confirmation_email(assignment, items)
+            messages.success(request, f'Assignment returned successfully! All {items.count()} hardware items verified by Asset Number and marked as available. Email sent to {assignment.employee.email}')
+        except Exception as e:
+            messages.success(request, f'Assignment returned successfully! All {items.count()} hardware items verified by Asset Number and marked as available. But email could not be sent: {str(e)}')
+        
         return redirect('view_assignments')
     
     verification_status = request.session.pop('verification_status', [])
@@ -3327,7 +3341,6 @@ def return_assignment(request, assignment_id):
         'today': timezone.now().date(),
     }
     return render(request, 'manager/return_assignment.html', context)
-
 # ============== SERIAL NUMBER VIEWS ==============
 
 
