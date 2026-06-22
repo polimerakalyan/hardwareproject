@@ -27,7 +27,7 @@
                         <span class="text-muted text-uppercase small fw-bold">Total Items</span>
                         <h2 class="mb-0 fw-bold mt-2">{{ total_items }}</h2>
                     </div>
-                    <div class="stat-icon rounded-circle p-3">
+                    <div class="stat-icon rounded-circle p-3 bg-primary bg-opacity-10">
                         <i class="bi bi-laptop fs-2 text-primary"></i>
                     </div>
                 </div>
@@ -43,7 +43,7 @@
                         <span class="text-muted text-uppercase small fw-bold">Verified</span>
                         <h2 class="mb-0 fw-bold mt-2">{{ verified_count }}</h2>
                     </div>
-                    <div class="stat-icon rounded-circle p-3">
+                    <div class="stat-icon rounded-circle p-3 bg-success bg-opacity-10">
                         <i class="bi bi-check-circle fs-2 text-success"></i>
                     </div>
                 </div>
@@ -59,7 +59,7 @@
                         <span class="text-muted text-uppercase small fw-bold">Pending</span>
                         <h2 class="mb-0 fw-bold mt-2">{{ pending_count }}</h2>
                     </div>
-                    <div class="stat-icon rounded-circle p-3">
+                    <div class="stat-icon rounded-circle p-3 bg-warning bg-opacity-10">
                         <i class="bi bi-clock fs-2 text-warning"></i>
                     </div>
                 </div>
@@ -75,7 +75,7 @@
                         <span class="text-muted text-uppercase small fw-bold">Mismatched</span>
                         <h2 class="mb-0 fw-bold mt-2">{{ mismatch_count }}</h2>
                     </div>
-                    <div class="stat-icon rounded-circle p-3">
+                    <div class="stat-icon rounded-circle p-3 bg-danger bg-opacity-10">
                         <i class="bi bi-x-circle fs-2 text-danger"></i>
                     </div>
                 </div>
@@ -133,10 +133,8 @@
                     <tr>
                         <th class="px-3" style="width: 50px;">#</th>
                         <th>Hardware Type</th>
-                        <th>Model</th>
-                        <th>Expected Serial</th>
-                        <th>Entered Serial</th>
-                        <th>Entered By</th>
+                        <th>Expected Asset</th>
+                        <th>Entered Asset</th>
                         <th>Entered On</th>
                         <th>Status</th>
                         <th>Verified By</th>
@@ -145,39 +143,30 @@
                 </thead>
                 <tbody>
                     {% for detail in verification_details %}
-                    <tr>
+                    <tr class="
+                        {% if detail.verified_at %}table-row-verified
+                        {% elif detail.is_match and detail.entered_asset %}table-row-matched
+                        {% elif detail.entered_asset and not detail.is_match %}table-row-mismatch
+                        {% endif %}">
                         <td class="px-3">{{ forloop.counter }}</td>
                         <td>
                             <div class="d-flex align-items-center">
-                                <div class="rounded-circle p-1 me-2" style="width: 32px; height: 32px;">
+                                <div class="rounded-circle p-1 me-2" style="width: 32px; height: 32px; background: #f0f0f0;">
                                     <i class="bi bi-laptop text-primary"></i>
                                 </div>
                                 <strong>{{ detail.hardware_type }}</strong>
                             </div>
                         </td>
-                        <td>{{ detail.model }}</td>
                         <td>
-                            <code class="bg-light px-2 py-1 rounded">{{ detail.expected_serial }}</code>
+                            <code class="asset-number">{{ detail.expected_asset }}</code>
                         </td>
                         <td>
-                            {% if detail.entered_serial %}
-                                <code class="bg-light px-2 py-1 rounded {% if not detail.is_match %}text-danger fw-bold{% endif %}">
-                                    {{ detail.entered_serial }}
+                            {% if detail.entered_asset %}
+                                <code class="{% if detail.is_match %}text-success{% else %}text-danger fw-bold{% endif %}">
+                                    {{ detail.entered_asset }}
                                 </code>
                             {% else %}
-                                <span class="text-muted fst-italic">—</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if detail.entered_by %}
-                                <div class="d-flex align-items-center">
-                                    <div class="bg-info bg-opacity-10 rounded-circle p-1 me-1" style="width: 24px; height: 24px;">
-                                        <i class="bi bi-person text-info small"></i>
-                                    </div>
-                                    <small>{{ detail.entered_by.get_full_name|default:detail.entered_by.username }}</small>
-                                </div>
-                            {% else %}
-                                <span class="text-muted">—</span>
+                                <span class="text-muted fst-italic">— Not entered —</span>
                             {% endif %}
                         </td>
                         <td>
@@ -188,11 +177,15 @@
                             {% endif %}
                         </td>
                         <td>
-                            {% if detail.is_match %}
+                            {% if detail.verified_at %}
                                 <span class="badge bg-success text-white px-3 py-2">
                                     <i class="bi bi-check-circle me-1"></i> Verified
                                 </span>
-                            {% elif detail.entered_serial %}
+                            {% elif detail.is_match and detail.entered_asset %}
+                                <span class="badge bg-info text-white px-3 py-2">
+                                    <i class="bi bi-check2 me-1"></i> Matched
+                                </span>
+                            {% elif detail.entered_asset %}
                                 <span class="badge bg-danger text-white px-3 py-2">
                                     <i class="bi bi-x-circle me-1"></i> Mismatch
                                 </span>
@@ -224,7 +217,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="10" class="text-center py-5">
+                        <td colspan="8" class="text-center py-5">
                             <div class="py-4">
                                 <i class="bi bi-laptop" style="font-size: 3rem; color: #dee2e6;"></i>
                                 <h5 class="mt-3 text-dark">No Hardware Items Found</h5>
@@ -251,13 +244,15 @@
             <div class="card-body">
                 <div class="d-flex gap-3 flex-wrap">
                     {% if pending_count > 0 %}
-                    <a href="#" class="btn btn-outline-warning">
-                        <i class="bi bi-clock me-2"></i>Remind Employee ({{ pending_count }} pending)
+                    <a href="mailto:{{ assignment.employee.email }}?subject=Please%20Enter%20Hardware%20Asset%20Numbers&body=Dear%20{{ assignment.employee.get_full_name|default:assignment.employee.username }}%2C%0A%0APlease%20enter%20the%20asset%20numbers%20for%20your%20assigned%20hardware%20as%20soon%20as%20possible.%0A%0AAssignment%20ID%3A%20{{ assignment.assignment_id }}%0A%0AThank%20you." 
+                       class="btn btn-outline-warning">
+                        <i class="bi bi-envelope me-2"></i>Remind Employee ({{ pending_count }} pending)
                     </a>
                     {% endif %}
                     {% if mismatch_count > 0 %}
-                    <a href="#" class="btn btn-outline-danger">
-                        <i class="bi bi-x-circle me-2"></i>Contact Employee ({{ mismatch_count }} mismatches)
+                    <a href="mailto:{{ assignment.employee.email }}?subject=Asset%20Number%20Mismatch%20Detected&body=Dear%20{{ assignment.employee.get_full_name|default:assignment.employee.username }}%2C%0A%0ASome%20asset%20numbers%20you%20entered%20do%20not%20match%20the%20assigned%20hardware.%20Please%20verify%20the%20physical%20devices%20and%20correct%20the%20entries.%0A%0AAssignment%20ID%3A%20{{ assignment.assignment_id }}%0A%0AThank%20you." 
+                       class="btn btn-outline-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Contact Employee ({{ mismatch_count }} mismatches)
                     </a>
                     {% endif %}
                 </div>
@@ -319,10 +314,22 @@
         padding: 0.3rem 0.6rem;
         border-radius: 6px;
         font-size: 0.85rem;
-        font-family: 'JetBrains Mono', monospace;
+        font-family: 'Courier New', monospace;
         color: #1e293b;
         border: 1px solid #e2e8f0;
     }
+    
+    .asset-number {
+        background-color: #e7f1ff;
+        color: #0d6efd;
+        font-weight: 600;
+        border-color: #b8d4f5;
+    }
+    
+    /* Table row styles */
+    .table-row-verified { background-color: rgba(25, 135, 84, 0.05); }
+    .table-row-matched { background-color: rgba(13, 202, 240, 0.05); }
+    .table-row-mismatch { background-color: rgba(220, 53, 69, 0.05); }
     
     .badge {
         font-weight: 500;
@@ -391,6 +398,27 @@
         .btn {
             width: 100%;
         }
+        
+        .table td, .table th {
+            font-size: 0.75rem;
+            padding: 0.5rem;
+        }
+        
+        code {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.4rem;
+        }
     }
+    
+    /* Dark mode support */
+    [data-theme="dark"] .asset-number {
+        background-color: #1a3a5c;
+        color: #60a5fa;
+        border-color: #2d4a6e;
+    }
+    
+    [data-theme="dark"] .table-row-verified { background-color: rgba(25, 135, 84, 0.1); }
+    [data-theme="dark"] .table-row-matched { background-color: rgba(13, 202, 240, 0.1); }
+    [data-theme="dark"] .table-row-mismatch { background-color: rgba(220, 53, 69, 0.1); }
 </style>
 {% endblock %}
