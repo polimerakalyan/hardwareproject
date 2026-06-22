@@ -410,10 +410,20 @@ from django.contrib.auth.hashers import make_password
 # Default password constant
 DEFAULT_PASSWORD = 'Eduquity@2024'  # Change this to your desired default password
 
+
+from django.core.mail import send_mail
+from django.conf import settings
+from django.contrib.auth.hashers import make_password
+
+# Default password constant
+DEFAULT_PASSWORD = 'Eduquity@2024'  # Change this to your desired default password
+
 @login_required
 def create_employee(request):
     if request.user.user_type != 'manager':
         return redirect('employee_dashboard')
+    manager_branch = getattr(request.user, 'branch_location', None) or 'Head Office'
+ 
     
     if request.method == 'POST':
         name = request.POST.get('name')
@@ -449,7 +459,9 @@ def create_employee(request):
             phone=phone,
             is_first_login=False,  # Set to False since no password change needed
             first_name=first_name,
-            last_name=last_name
+            last_name=last_name,
+            branch_location=manager_branch, # Set employee's branch to match manager's branch
+
         )
         
         try:
@@ -556,6 +568,8 @@ Eduquity Hardware Management Team
         'active_employees': active_employees,
         'pending_employees': pending_employees,
         'default_password': DEFAULT_PASSWORD,
+        'manager_branch': manager_branch,  # Add manager branch to context
+
     }
     return render(request, 'manager/create_employee.html', context)
 
@@ -570,6 +584,8 @@ def bulk_create_employees(request):
     """Bulk create employees via CSV upload with default password"""
     if request.user.user_type != 'manager':
         return redirect('employee_dashboard')
+    manager_branch = getattr(request.user, 'branch_location', None) or 'Head Office'
+
     
     if request.method == 'POST':
         csv_file = request.FILES.get('csv_file')
@@ -641,7 +657,9 @@ def bulk_create_employees(request):
                         phone=phone,
                         is_first_login=False,  # No password change needed
                         first_name=first_name,
-                        last_name=last_name
+                        last_name=last_name,
+                        branch_location=manager_branch,  # Set employee's branch to match manager's branch
+
                     )
                     
                     created_employees.append({
@@ -683,6 +701,8 @@ def bulk_create_employees(request):
         'employee_count': employee_count,
         'sample_csv': sample_csv_template(),
         'default_password': DEFAULT_PASSWORD,
+        'manager_branch': manager_branch,
+
     }
     return render(request, 'manager/bulk_create_employees.html', context)
 
