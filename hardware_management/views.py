@@ -4028,10 +4028,22 @@ def manager_verification_details(request, assignment_id):
 
 
 # ============== EMPLOYEE VIEWS ==============
+
 @login_required
 def employee_dashboard(request):
     if request.user.user_type != 'employee':
         return redirect('manager_dashboard')
+    
+    # Get branch location with multiple fallbacks
+    branch_location = getattr(request.user, 'branch_location', None)
+    
+    # If branch_location is None or empty, try to get from manager
+    if not branch_location and request.user.manager:
+        branch_location = getattr(request.user.manager, 'branch_location', None)
+    
+    # Final fallback
+    if not branch_location:
+        branch_location = 'Head Office'
     
     current_assignments = HardwareAssignment.objects.filter(
         employee=request.user,
@@ -4045,15 +4057,29 @@ def employee_dashboard(request):
     ).count()
     
     current_exam_city = None
+    current_exam_center_name = None
     if current_assignments.exists():
-        current_exam_city = current_assignments.first().exam_city
+        first_assignment = current_assignments.first()
+        current_exam_city = first_assignment.exam_city
+        current_exam_center_name = getattr(first_assignment, 'exam_center_name', None)
     
-    pending_serials_count = 0
+    pending_asset_count = 0
     for assignment in current_assignments:
         items = HardwareAssignmentItem.objects.filter(assignment=assignment)
+        assignment.total_items = items.count()
+        assignment.entered_asset_count = 0
+        assignment.verified_asset_count = 0
+        assignment.pending_asset_count = 0
+        
         for item in items:
-            if not hasattr(item, 'serial_entry'):
-                pending_serials_count += 1
+            if hasattr(item, 'asset_entry'):
+                assignment.entered_asset_count += 1
+                if item.asset_entry.verified:
+                    assignment.verified_asset_count += 1
+            else:
+                assignment.pending_asset_count += 1
+        
+        pending_asset_count += assignment.pending_asset_count
     
     employee_name = request.user.get_full_name() or request.user.username
     
@@ -4061,9 +4087,14 @@ def employee_dashboard(request):
         'current_assignments': current_assignments,
         'current_assignments_count': current_assignments_count,
         'completed_assignments_count': completed_assignments_count,
-        'pending_serials_count': pending_serials_count,
+        'pending_asset_count': pending_asset_count,
         'current_exam_city': current_exam_city,
-        'employee_name': employee_name,  
+        'current_exam_center_name': current_exam_center_name,
+        'employee_name': employee_name,
+        'today': timezone.now().date(),
+        'current_time': timezone.now(),
+        'branch_location': branch_location,
+        'user': request.user,
     }
     return render(request, 'employee/dashboard.html', context)
 
