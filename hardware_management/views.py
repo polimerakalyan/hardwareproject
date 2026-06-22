@@ -3685,34 +3685,6 @@ def verify_all_employee_entries(request, assignment_id):
             )
     
     return redirect('view_serial_entries')
-@login_required
-def verify_serial_entry(request, entry_id):
-    if request.user.user_type != 'manager':
-        return redirect('employee_dashboard')
-    
-    serial_entry = get_object_or_404(HardwareSerialEntry, id=entry_id)
-    
-    if serial_entry.assignment_item.assignment.assigned_by != request.user:
-        messages.error(request, 'Unauthorized access!')
-        return redirect('view_serial_entries')
-    
-    is_match = serial_entry.serial_number == serial_entry.assignment_item.hardware.serial_number
-    
-    if is_match:
-        serial_entry.verified = True
-        serial_entry.verified_by = request.user
-        serial_entry.verified_at = timezone.now()
-        serial_entry.save()
-        
-        hardware = serial_entry.assignment_item.hardware
-        hardware.status = 'in_use'
-        hardware.save()
-        
-        messages.success(request, f'Serial entry verified successfully! Hardware is now marked as in use.')
-    else:
-        messages.error(request, 'Cannot verify - Serial number does not match the assigned hardware!')
-    
-    return redirect('view_serial_entries')
 
 @login_required
 def verify_all_employee_entries(request, assignment_id):
