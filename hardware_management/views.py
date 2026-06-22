@@ -3687,51 +3687,6 @@ def verify_all_employee_entries(request, assignment_id):
     return redirect('view_serial_entries')
 
 @login_required
-def verify_all_employee_entries(request, assignment_id):
-    """Single click verify all pending entries for an employee"""
-    if request.user.user_type != 'manager':
-        return redirect('employee_dashboard')
-    
-    assignment = get_object_or_404(
-        HardwareAssignment,
-        id=assignment_id,
-        assigned_by=request.user,
-        actual_return_date__isnull=True
-    )
-    
-    items = HardwareAssignmentItem.objects.filter(assignment=assignment)
-    verified_count = 0
-    
-    for item in items:
-        try:
-            serial_entry = HardwareSerialEntry.objects.get(assignment_item=item)
-            if not serial_entry.verified and serial_entry.serial_number == item.hardware.serial_number:
-                serial_entry.verified = True
-                serial_entry.verified_by = request.user
-                serial_entry.verified_at = timezone.now()
-                serial_entry.save()
-                
-                item.hardware.status = 'in_use'
-                item.hardware.save()
-                verified_count += 1
-        except HardwareSerialEntry.DoesNotExist:
-            continue
-    
-    employee_name = assignment.employee.get_full_name() or assignment.employee.username
-    
-    if verified_count > 0:
-        messages.success(
-            request, 
-            f'Successfully verified {verified_count} hardware item(s) for {employee_name}!'
-        )
-    else:
-        messages.warning(
-            request, 
-            f'No eligible items found for verification for {employee_name}. Items must have matching serial numbers and not be already verified.'
-        )
-    
-    return redirect('view_serial_entries')
-@login_required
 def manager_verification_status(request):
     """Manager dashboard to see verification status across all assignments"""
     if request.user.user_type != 'manager':
