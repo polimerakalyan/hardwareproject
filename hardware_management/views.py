@@ -21,6 +21,7 @@ from django.db.models import Q
 # ============== AUTHENTICATION VIEWS ==============
 
 
+
 def manager_register(request):
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -48,6 +49,7 @@ def manager_register(request):
             messages.error(request, 'Email already exists!')
             return redirect('manager_register')
         
+        # Create user with branch_location directly
         user = CustomUser.objects.create_user(
             username=username,
             email=email,
@@ -56,18 +58,14 @@ def manager_register(request):
             phone=phone,
             is_first_login=False,
             first_name=first_name,
-            last_name=last_name
+            last_name=last_name,
+            branch_location=branch_location or 'Head Office'  # Set default if empty
         )
-        
-        # Store branch location in user profile (you may need to add this field to CustomUser model)
-        user.branch_location = branch_location
-        user.save()
         
         messages.success(request, f'Manager account created successfully for {first_name} {last_name}! Please login.')
         return redirect('login')
     
     return render(request, 'auth/manager_register.html')
-
       
 def user_login(request):
     if request.user.is_authenticated:
