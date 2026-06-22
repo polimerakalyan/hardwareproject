@@ -3965,6 +3965,7 @@ def view_my_assignments(request):
     return render(request, 'employee/view_my_assignments.html', context)
 
 
+
 @login_required
 def my_assignment_details(request, assignment_id):
     if request.user.user_type != 'employee':
@@ -3993,6 +3994,9 @@ def my_assignment_details(request, assignment_id):
     entered_count = total_items - pending_count
     verified_count = sum(1 for item in items if hasattr(item, 'asset_entry') and item.asset_entry.verified)
     
+    # Get exam center name
+    exam_center_name = getattr(assignment, 'exam_center_name', None)
+    
     context = {
         'assignment': assignment,
         'items': items,
@@ -4000,16 +4004,19 @@ def my_assignment_details(request, assignment_id):
         'pending_count': pending_count,
         'entered_count': entered_count,
         'verified_count': verified_count,
+        'exam_center_name': exam_center_name,
     }
     return render(request, 'employee/my_assignment_details.html', context)
+    
+
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect
-from .models import HardwareAssignment, HardwareAssignmentItem, HardwareType
-
+from django.contrib import messages
+from .models import HardwareAssignment, HardwareAssignmentItem, HardwareType, HardwareAssetEntry
 @login_required
 def export_assignment_excel(request, assignment_id):
     if request.user.user_type != 'employee':
@@ -4018,173 +4025,411 @@ def export_assignment_excel(request, assignment_id):
     assignment = get_object_or_404(HardwareAssignment, id=assignment_id, employee=request.user)
     items = HardwareAssignmentItem.objects.filter(assignment=assignment).select_related('hardware__hardware_type')
     
-    hardware_type_order = [
-        'Laptop', 'Firewall', 'PXE BOX', 'L1 Devices', 'Tatwiks', 
-        'Cameras', 'Barcode Scanners', 'Chargers Laptop', 'Firwall Charger', 'PXE BOX Charger'
-    ]
+    # Check if there are any items
+    if not items.exists():
+        messages.warning(request, 'No hardware items found in this assignment to export.')
+        return redirect('my_assignment_details', assignment_id=assignment_id)
     
-    existing_hardware_types = HardwareType.objects.filter(name__in=hardware_type_order)
+    # Get all hardware types from the items
+    hardware_type_ids = items.values_list('hardware__hardware_type', flat=True).distinct()
+    hardware_types = HardwareType.objects.filter(id__in=hardware_type_ids).order_by('name')
     
-    hardware_types = []
-    for type_name in hardware_type_order:
-        try:
-            hw_type = existing_hardware_types.get(name=type_name)
-            hardware_types.append(hw_type)
-        except HardwareType.DoesNotExist:
-            from types import SimpleNamespace
-            dummy_type = SimpleNamespace()
-            dummy_type.name = type_name
-            dummy_type.id = None
-            hardware_types.append(dummy_type)
+    if not hardware_types.exists():
+        messages.warning(request, 'No hardware types found in this assignment.')
+        return redirect('my_assignment_details', assignment_id=assignment_id)
     
+    # Group items by hardware type
     items_by_type = {}
     max_items_per_type = 0
     
-    for type_name in hardware_type_order:
-        type_items = [item for item in items if item.hardware.hardware_type.name == type_name]
-        items_by_type[type_name] = type_items
-        max_items_per_type = max(max_items_per_type, len(type_items))
+    for hw_type in hardware_types:
+        type_items = [item for item in items if item.hardware.hardware_type and item.hardware.hardware_type.id == hw_type.id]
+        items_by_type[hw_type.id] = type_items
+        if len(type_items) > max_items_per_type:
+            max_items_per_type = len(type_items)
     
     wb = openpyxl.Workbook()
     ws = wb.active
     
+    # ==============================================
+    # FILENAME: exam center name_exam city_project name_employee name.xlsx
+    # ==============================================
+    
+    # Get exam center name
+    exam_center_name = getattr(assignment, 'exam_center_name', 'Not Specified')
+    if not exam_center_name or exam_center_name == '':
+        exam_center_name = 'NoCenter'
+    
+    # Get exam city
+    exam_city = assignment.exam_city or 'NoCity'
+    
+    # Get project name
+    project_name = assignment.project.project_name if assignment.project else 'NoProject'
+    
+    # Get employee name
+    employee_name = assignment.employee.get_full_name() or assignment.employee.username
+    
+    # Clean up strings for filename (remove special characters, replace spaces with underscores)
+    import re
+    def clean_filename(text):
+        # Replace spaces with underscores
+        text = str(text).replace(' ', '_')
+        # Remove special characters except underscores and hyphens
+        text = re.sub(r'[^a-zA-Z0-9_\-]', '', text)
+        return text
+    
+    exam_center_name_clean = clean_filename(exam_center_name)
+    exam_city_clean = clean_filename(exam_city)
+    project_name_clean = clean_filename(project_name)
+    employee_name_clean = clean_filename(employee_name)
+    
+    # Build filename
+    filename = f"{exam_center_name_clean}_{exam_city_clean}_{project_name_clean}_{employee_name_clean}.xlsx"
+    
     assignment_id_str = str(assignment.assignment_id).replace('-', '')[:8]
     ws.title = f"Assign_{assignment_id_str}"
     
-    header_font = Font(bold=True, color="FFFFFF", size=12)
+    # Define styles
+    header_font = Font(bold=True, color="FFFFFF", size=11)
     header_fill = PatternFill(start_color="E04D00", end_color="E04D00", fill_type="solid")
-    subheader_font = Font(bold=True, color="FFFFFF", size=11)
-    subheader_fill = PatternFill(start_color="666666", end_color="666666", fill_type="solid")
-    center_alignment = Alignment(horizontal="center", vertical="center")
-    left_alignment = Alignment(horizontal="left", vertical="center")
+    subheader_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
     border = Border(
-        left=Side(style='thin'), right=Side(style='thin'),
-        top=Side(style='thin'), bottom=Side(style='thin')
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
     )
+    center_alignment = Alignment(horizontal="center", vertical="center")
     
-    ws.merge_cells(f'A1:{get_column_letter(len(hardware_types))}1')
-    title_cell = ws['A1']
-    title_cell.value = f"ASSIGNMENT DETAILS - {assignment.assignment_id}"
-    title_cell.font = Font(bold=True, size=14, color="E04D00")
-    title_cell.alignment = Alignment(horizontal="center", vertical="center")
-    ws.row_dimensions[1].height = 30
+    # Calculate total columns (4 per hardware type: Type Name, Asset, Entered, Status)
+    total_hw_types = hardware_types.count()
+    total_columns = total_hw_types * 4
     
-    info_start_row = 3
+    # Title
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=total_columns)
+    ws['A1'] = f"ASSIGNMENT DETAILS - {assignment.assignment_id}"
+    ws['A1'].font = Font(bold=True, size=14)
+    ws['A1'].alignment = center_alignment
+    
+    # Assignment info with Exam Center included
+    info_start = 3
     info_data = [
-        ['Project:', assignment.project.project_name],
+        ['Project:', assignment.project.project_name if assignment.project else 'N/A'],
         ['Exam City:', assignment.exam_city or 'Not specified'],
+        ['Exam Center:', getattr(assignment, 'exam_center_name', 'Not specified') or 'Not specified'],
         ['Employee:', assignment.employee.get_full_name() or assignment.employee.username],
         ['Assigned Date:', assignment.assigned_date.strftime('%d %b %Y')],
+        ['Expected Return:', assignment.expected_return_date.strftime('%d %b %Y')],
     ]
     
-    for i, (label, value) in enumerate(info_data, start=info_start_row):
-        ws[f'A{i}'] = label
-        ws[f'B{i}'] = value
-        ws[f'A{i}'].font = Font(bold=True)
-        ws.row_dimensions[i].height = 18
+    for i, (label, value) in enumerate(info_data, start=info_start):
+        ws.cell(row=i, column=1, value=label).font = Font(bold=True)
+        ws.cell(row=i, column=2, value=value)
     
-    spacing_row = info_start_row + len(info_data) + 1
-    ws.row_dimensions[spacing_row].height = 10
+    # Headers - Each hardware type gets 4 columns
+    header_row = info_start + len(info_data) + 2
     
-    header_row = spacing_row + 1
+    # Main header row with Hardware Type as merged cells (4 columns each)
+    current_col = 1
+    for hw_type in hardware_types:
+        end_col = current_col + 3
+        ws.merge_cells(start_row=header_row, start_column=current_col, end_row=header_row, end_column=end_col)
+        hw_cell = ws.cell(row=header_row, column=current_col, value=f"{hw_type.name}")
+        hw_cell.font = header_font
+        hw_cell.fill = header_fill
+        hw_cell.alignment = center_alignment
+        hw_cell.border = border
+        current_col = end_col + 1
     
-    for col_idx, hw_type in enumerate(hardware_types, start=1):
-        cell = ws.cell(row=header_row, column=col_idx, value=hw_type.name)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.alignment = center_alignment
-        cell.border = border
+    # Sub-headers: Asset Number, Entered Asset, Status, Verified By
+    sub_header_row = header_row + 1
+    current_col = 1
+    for hw_type in hardware_types:
+        ws.merge_cells(start_row=sub_header_row, start_column=current_col, end_row=sub_header_row, end_column=current_col + 3)
+        type_label = ws.cell(row=sub_header_row, column=current_col, value=f"{hw_type.name} Details")
+        type_label.font = Font(bold=True, color="FFFFFF", size=9)
+        type_label.fill = subheader_fill
+        type_label.alignment = center_alignment
+        type_label.border = border
+        current_col += 4
+    
+    # Data headers row
+    data_header_row = sub_header_row + 1
+    current_col = 1
+    for hw_type in hardware_types:
+        # Asset Number
+        asset_cell = ws.cell(row=data_header_row, column=current_col, value="Asset Number")
+        asset_cell.font = Font(bold=True, color="FFFFFF", size=8)
+        asset_cell.fill = PatternFill(start_color="2C3E50", end_color="2C3E50", fill_type="solid")
+        asset_cell.alignment = center_alignment
+        asset_cell.border = border
         
-        subheader_cell = ws.cell(row=header_row + 1, column=col_idx, value="Serial Numbers")
-        subheader_cell.font = subheader_font
-        subheader_cell.fill = subheader_fill
-        subheader_cell.alignment = center_alignment
-        subheader_cell.border = border
+        # Entered Asset
+        entered_cell = ws.cell(row=data_header_row, column=current_col + 1, value="Entered Asset")
+        entered_cell.font = Font(bold=True, color="FFFFFF", size=8)
+        entered_cell.fill = PatternFill(start_color="2C3E50", end_color="2C3E50", fill_type="solid")
+        entered_cell.alignment = center_alignment
+        entered_cell.border = border
+        
+        # Verification Status
+        status_cell = ws.cell(row=data_header_row, column=current_col + 2, value="Status")
+        status_cell.font = Font(bold=True, color="FFFFFF", size=8)
+        status_cell.fill = PatternFill(start_color="2C3E50", end_color="2C3E50", fill_type="solid")
+        status_cell.alignment = center_alignment
+        status_cell.border = border
+        
+        # Verified By
+        verified_by_cell = ws.cell(row=data_header_row, column=current_col + 3, value="Verified By")
+        verified_by_cell.font = Font(bold=True, color="FFFFFF", size=8)
+        verified_by_cell.fill = PatternFill(start_color="2C3E50", end_color="2C3E50", fill_type="solid")
+        verified_by_cell.alignment = center_alignment
+        verified_by_cell.border = border
+        
+        current_col += 4
     
-    data_start_row = header_row + 2
+    # Data rows
+    data_start_row = data_header_row + 1
+    
+    # Track stats
+    total_items = items.count()
+    verified_count = 0
+    pending_count = 0
+    not_entered_count = 0
+    mismatch_count = 0
     
     for row_offset in range(max_items_per_type):
         current_row = data_start_row + row_offset
+        current_col = 1
         
-        for col_idx, hw_type in enumerate(hardware_types, start=1):
-            type_items = items_by_type.get(hw_type.name, [])
+        for hw_type in hardware_types:
+            type_items = items_by_type.get(hw_type.id, [])
             
             if row_offset < len(type_items):
                 item = type_items[row_offset]
                 
-                if hasattr(item, 'serial_entry') and item.serial_entry.serial_number:
-                    serial_value = item.serial_entry.serial_number
-                else:
-                    serial_value = item.hardware.serial_number
+                # Get asset number (expected)
+                asset_number = item.hardware.asset_number if item.hardware.asset_number else 'N/A'
                 
-                cell = ws.cell(row=current_row, column=col_idx, value=serial_value)
-                cell.border = border
-                cell.alignment = center_alignment
+                # Get entered asset number from asset_entry
+                entered_asset = 'Not Entered'
+                verification_status = 'Not Entered'
+                verified_by = '—'
+                is_verified = False
+                is_match = False
                 
-                if hasattr(item, 'serial_entry'):
-                    if item.serial_entry.verified:
-                        cell.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")  # Green for verified
-                        cell.font = Font(bold=True, color="006100")
+                try:
+                    asset_entry = item.asset_entry
+                    entered_asset = asset_entry.entered_asset_number
+                    is_verified = asset_entry.verified
+                    is_match = (entered_asset == asset_number)
+                    
+                    if is_verified:
+                        verification_status = 'Verified ✓'
+                        verified_count += 1
+                        if asset_entry.verified_by:
+                            verified_by = asset_entry.verified_by.get_full_name() or asset_entry.verified_by.username
+                    elif is_match:
+                        verification_status = 'Matched - Pending'
+                        pending_count += 1
                     else:
-                        cell.fill = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")  # Yellow for pending
-                        cell.font = Font(bold=True, color="9C5700")
+                        verification_status = 'Mismatch ✗'
+                        mismatch_count += 1
+                except HardwareAssetEntry.DoesNotExist:
+                    not_entered_count += 1
+                
+                # Asset Number cell
+                asset_cell = ws.cell(row=current_row, column=current_col, value=asset_number)
+                asset_cell.border = border
+                asset_cell.alignment = center_alignment
+                asset_cell.fill = PatternFill(start_color="E7F1FF", end_color="E7F1FF", fill_type="solid")
+                asset_cell.font = Font(color="0d6efd", bold=True)
+                
+                # Entered Asset cell
+                entered_cell = ws.cell(row=current_row, column=current_col + 1, value=entered_asset)
+                entered_cell.border = border
+                entered_cell.alignment = center_alignment
+                
+                if is_verified:
+                    entered_cell.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+                    entered_cell.font = Font(color="006100", bold=True)
+                elif entered_asset != 'Not Entered' and is_match:
+                    entered_cell.fill = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
+                    entered_cell.font = Font(color="9C5700", bold=True)
+                elif entered_asset != 'Not Entered' and not is_match:
+                    entered_cell.fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+                    entered_cell.font = Font(color="9C0006", bold=True)
                 else:
-                    cell.fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")  # Red for not entered
-                    cell.font = Font(bold=True, color="9C0006")
+                    entered_cell.fill = PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid")
+                    entered_cell.font = Font(color="666666", italic=True)
+                
+                # Status cell
+                status_cell = ws.cell(row=current_row, column=current_col + 2, value=verification_status)
+                status_cell.border = border
+                status_cell.alignment = center_alignment
+                status_cell.font = Font(bold=True)
+                
+                if verification_status == 'Verified ✓':
+                    status_cell.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+                    status_cell.font = Font(color="006100", bold=True)
+                elif verification_status == 'Matched - Pending':
+                    status_cell.fill = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
+                    status_cell.font = Font(color="9C5700", bold=True)
+                elif verification_status == 'Mismatch ✗':
+                    status_cell.fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+                    status_cell.font = Font(color="9C0006", bold=True)
+                else:
+                    status_cell.fill = PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid")
+                    status_cell.font = Font(color="666666", italic=True)
+                
+                # Verified By cell
+                verified_by_cell = ws.cell(row=current_row, column=current_col + 3, value=verified_by)
+                verified_by_cell.border = border
+                verified_by_cell.alignment = center_alignment
+                
+                if is_verified:
+                    verified_by_cell.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+                    verified_by_cell.font = Font(color="006100")
+                
             else:
-                cell = ws.cell(row=current_row, column=col_idx, value="—")
-                cell.border = border
-                cell.alignment = center_alignment
-                cell.font = Font(color="999999", italic=True)
+                # Empty cells for rows without items
+                for i in range(4):
+                    empty_cell = ws.cell(row=current_row, column=current_col + i, value="—")
+                    empty_cell.border = border
+                    empty_cell.alignment = center_alignment
+                    empty_cell.font = Font(color="999999", italic=True)
+            
+            current_col += 4
     
-    summary_row = data_start_row + max_items_per_type + 2
-    ws.merge_cells(f'A{summary_row}:B{summary_row}')
-    summary_title = ws.cell(row=summary_row, column=1, value="SUMMARY")
-    summary_title.font = Font(bold=True, size=12)
+    # Summary section
+    summary_row = data_start_row + max_items_per_type + 3
     
-    total_items = items.count()
-    verified_count = sum(1 for item in items if hasattr(item, 'serial_entry') and item.serial_entry.verified)
-    pending_count = sum(1 for item in items if hasattr(item, 'serial_entry') and not item.serial_entry.verified)
-    not_entered_count = total_items - (verified_count + pending_count)
+    # Summary header
+    ws.merge_cells(start_row=summary_row, start_column=1, end_row=summary_row, end_column=total_columns)
+    summary_header = ws.cell(row=summary_row, column=1, value="📊 ASSIGNMENT SUMMARY")
+    summary_header.font = Font(bold=True, size=12, color="FFFFFF")
+    summary_header.fill = PatternFill(start_color="2C3E50", end_color="2C3E50", fill_type="solid")
+    summary_header.alignment = center_alignment
     
-    stats = [
-        ['Total Items:', total_items],
-        ['Verified:', verified_count],
-        ['Pending:', pending_count],
-        ['Not Entered:', not_entered_count],
+    # Summary stats
+    summary_start = summary_row + 2
+    
+    stats_data = [
+        ['Total Hardware Items:', str(total_items)],
+        ['✅ Verified:', str(verified_count)],
+        ['⏳ Matched - Pending:', str(pending_count)],
+        ['❌ Mismatch:', str(mismatch_count)],
+        ['📝 Not Entered:', str(not_entered_count)],
+        ['', ''],
+        ['📈 Completion Rate:', f"{round((verified_count / total_items * 100) if total_items > 0 else 0, 1)}%"],
     ]
     
-    for i, (label, value) in enumerate(stats, start=summary_row + 1):
-        ws[f'A{i}'] = label
-        ws[f'B{i}'] = value
-        ws[f'A{i}'].font = Font(bold=True)
+    for idx, (label, value) in enumerate(stats_data):
+        row = summary_start + idx
+        
+        label_cell = ws.cell(row=row, column=1, value=label)
+        label_cell.font = Font(bold=True)
+        label_cell.border = border
+        
+        value_cell = ws.cell(row=row, column=2, value=value)
+        value_cell.border = border
+        
+        if 'Verified' in label and verified_count > 0:
+            value_cell.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+            value_cell.font = Font(color="006100", bold=True)
+        elif 'Matched' in label and pending_count > 0:
+            value_cell.fill = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
+            value_cell.font = Font(color="9C5700", bold=True)
+        elif 'Mismatch' in label and mismatch_count > 0:
+            value_cell.fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+            value_cell.font = Font(color="9C0006", bold=True)
+        elif 'Not Entered' in label and not_entered_count > 0:
+            value_cell.fill = PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid")
+            value_cell.font = Font(color="666666", bold=True)
     
-    type_count_row = summary_row + len(stats) + 2
-    ws.merge_cells(f'A{type_count_row}:B{type_count_row}')
-    type_count_title = ws.cell(row=type_count_row, column=1, value="ITEMS PER TYPE")
-    type_count_title.font = Font(bold=True, size=12)
+    # Asset Number Summary
+    asset_summary_row = summary_start + len(stats_data) + 2
+    ws.merge_cells(start_row=asset_summary_row, start_column=1, end_row=asset_summary_row, end_column=2)
+    asset_summary_header = ws.cell(row=asset_summary_row, column=1, value="📋 ASSET NUMBER SUMMARY")
+    asset_summary_header.font = Font(bold=True, size=11, color="FFFFFF")
+    asset_summary_header.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+    asset_summary_header.alignment = center_alignment
     
-    for i, hw_type in enumerate(hardware_types, start=type_count_row + 1):
-        type_count = len(items_by_type.get(hw_type.name, []))
-        ws[f'A{i}'] = hw_type.name
-        ws[f'B{i}'] = type_count
-        ws[f'A{i}'].font = Font(bold=True)
+    # Collect all asset numbers with status
+    asset_summary = []
+    for item in items:
+        asset_number = item.hardware.asset_number if item.hardware.asset_number else 'N/A'
+        status = "Not Entered"
+        
+        try:
+            asset_entry = item.asset_entry
+            if asset_entry.verified:
+                status = "Verified ✓"
+            elif asset_entry.entered_asset_number == asset_number:
+                status = "Matched - Pending"
+            else:
+                status = "Mismatch ✗"
+        except HardwareAssetEntry.DoesNotExist:
+            pass
+        
+        asset_summary.append({
+            'asset': asset_number,
+            'hardware_type': item.hardware.hardware_type.name if item.hardware.hardware_type else 'Unknown',
+            'status': status
+        })
     
-    for col in range(1, len(hardware_types) + 1):
+    row = asset_summary_row + 2
+    for idx, asset_info in enumerate(asset_summary, 1):
+        ws.cell(row=row, column=1, value=f"{idx}. {asset_info['asset']}").border = border
+        ws.cell(row=row, column=2, value=f"{asset_info['hardware_type']} - {asset_info['status']}").border = border
+        
+        # Color code the status
+        status_cell = ws.cell(row=row, column=2)
+        if 'Verified' in asset_info['status']:
+            status_cell.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+            status_cell.font = Font(color="006100", bold=True)
+        elif 'Matched' in asset_info['status']:
+            status_cell.fill = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
+            status_cell.font = Font(color="9C5700", bold=True)
+        elif 'Mismatch' in asset_info['status']:
+            status_cell.fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+            status_cell.font = Font(color="9C0006", bold=True)
+        else:
+            status_cell.fill = PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid")
+            status_cell.font = Font(color="666666", italic=True)
+        
+        row += 1
+    
+    # Set column widths
+    for col in range(1, total_columns + 1):
         column_letter = get_column_letter(col)
-        max_length = len(hardware_types[col-1].name) + 5
-        for row in range(data_start_row, data_start_row + max_items_per_type):
-            cell_value = ws.cell(row=row, column=col).value
-            if cell_value:
-                max_length = max(max_length, len(str(cell_value)) + 2)
-        ws.column_dimensions[column_letter].width = min(max_length, 20)
+        if col % 4 == 1:  # Asset Number column
+            ws.column_dimensions[column_letter].width = 16
+        elif col % 4 == 2:  # Entered Asset column
+            ws.column_dimensions[column_letter].width = 16
+        elif col % 4 == 3:  # Status column
+            ws.column_dimensions[column_letter].width = 18
+        else:  # Verified By column
+            ws.column_dimensions[column_letter].width = 18
     
+    # Info columns (A, B) for summary
+    ws.column_dimensions['A'].width = 25
+    ws.column_dimensions['B'].width = 35
+    
+    # Set row heights
+    ws.row_dimensions[header_row].height = 30
+    ws.row_dimensions[sub_header_row].height = 25
+    ws.row_dimensions[data_header_row].height = 25
+    
+    for row in range(data_start_row, data_start_row + max_items_per_type):
+        ws.row_dimensions[row].height = 24
+    
+    # Freeze header row
+    ws.freeze_panes = ws.cell(row=data_header_row + 1, column=1)
+    
+    # Prepare response with the new filename format
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
-    
-    assignment_id_str = str(assignment.assignment_id).replace('-', '')[:8]
-    filename = f"assignment_{assignment_id_str}_{assignment.employee.username}.xlsx"
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     
     wb.save(response)
