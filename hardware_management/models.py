@@ -73,6 +73,7 @@ class HardwareAssignment(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='hardware_assignments')
     hardware_items = models.ManyToManyField(Hardware, through='HardwareAssignmentItem')
     exam_city = models.CharField(max_length=200, blank=True, null=True, help_text="City where the employee will take the exam")
+    exam_center_name = models.CharField(max_length=200, blank=True, null=True, help_text="Name of the exam center")
     assigned_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='assignments_made')
     assigned_date = models.DateTimeField(auto_now_add=True)
     expected_return_date = models.DateField()
@@ -325,5 +326,7 @@ class HardwareAssetEntry(models.Model):
     entered_at = models.DateTimeField(auto_now_add=True)
     verified = models.BooleanField(default=False)
     verified_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='verified_asset_entries')
-    verified_at = models.DateTimeField(null=True, blank=True)    
+    verified_at = models.DateTimeField(null=True, blank=True)
+    
   
+
