@@ -5242,6 +5242,7 @@ def export_my_hardware_excel(request):
     wb.save(response)
     return response
 
+
 @login_required
 def request_hardware_transfer(request):
     """Employee requests hardware transfer from another employee (multiple items)"""
@@ -5274,6 +5275,7 @@ def request_hardware_transfer(request):
                 my_hardware.append({
                     'id': hardware.id,
                     'hardware_type': hardware.hardware_type.name,
+                    'asset_number': hardware.asset_number if hardware.asset_number else 'N/A',  # Added asset number
                     'serial_number': hardware.serial_number,
                     'model_name': hardware.model_name,
                     'brand': hardware.brand,
@@ -5286,8 +5288,43 @@ def request_hardware_transfer(request):
         to_employee_id = request.POST.get('to_employee_id')
         transfer_type = request.POST.get('transfer_type')
         reason = request.POST.get('reason')
-        expected_arrival_date = request.POST.get('expected_arrival_date')
-        expected_return_date = request.POST.get('expected_return_date') if transfer_type == 'temporary' else None
+        
+        # Handle date formats - DD-MM-YYYY to YYYY-MM-DD
+        expected_arrival_date = None
+        expected_return_date = None
+        
+        if request.POST.get('expected_arrival_date'):
+            try:
+                arrival_date_str = request.POST.get('expected_arrival_date')
+                # Check if date is in DD-MM-YYYY format
+                if '-' in arrival_date_str:
+                    parts = arrival_date_str.split('-')
+                    if len(parts) == 3 and len(parts[0]) == 2 and len(parts[1]) == 2 and len(parts[2]) == 4:
+                        # DD-MM-YYYY format
+                        expected_arrival_date = datetime.strptime(arrival_date_str, '%d-%m-%Y').date()
+                    else:
+                        expected_arrival_date = datetime.strptime(arrival_date_str, '%Y-%m-%d').date()
+                else:
+                    expected_arrival_date = datetime.strptime(arrival_date_str, '%Y-%m-%d').date()
+            except (ValueError, TypeError):
+                expected_arrival_date = None
+        
+        if transfer_type == 'temporary' and request.POST.get('expected_return_date'):
+            try:
+                return_date_str = request.POST.get('expected_return_date')
+                # Check if date is in DD-MM-YYYY format
+                if '-' in return_date_str:
+                    parts = return_date_str.split('-')
+                    if len(parts) == 3 and len(parts[0]) == 2 and len(parts[1]) == 2 and len(parts[2]) == 4:
+                        # DD-MM-YYYY format
+                        expected_return_date = datetime.strptime(return_date_str, '%d-%m-%Y').date()
+                    else:
+                        expected_return_date = datetime.strptime(return_date_str, '%Y-%m-%d').date()
+                else:
+                    expected_return_date = datetime.strptime(return_date_str, '%Y-%m-%d').date()
+            except (ValueError, TypeError):
+                expected_return_date = None
+        
         requester_notes = request.POST.get('requester_notes')
         delivery_method = request.POST.get('delivery_method')
         
@@ -5393,8 +5430,7 @@ def request_hardware_transfer(request):
         'my_hardware': my_hardware,
         'today': timezone.now().date(),
     }
-    return render(request, 'employee/request_transfer.html', context)
-@login_required
+    return render(request, 'employee/request_transfer.html', context)@login_required
 def update_transfer_status_employee(request, transfer_id):
     """Employee updates transfer status with proper hardware transfer"""
     if request.user.user_type != 'employee':
