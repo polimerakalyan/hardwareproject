@@ -75,6 +75,8 @@ path('manager/transfer-requests/', views.manager_transfer_requests, name='manage
 path('manager/approve-transfer/<int:transfer_id>/', views.approve_transfer_request, name='approve_transfer_request'),
 path('manager/reject-transfer/<int:transfer_id>/', views.reject_transfer_request, name='reject_transfer_request'),
 path('manager/transfer_details/<int:transfer_id>/', views.transfer_details, name='transfer_details'),
+path('verify-asset-entry/<int:entry_id>/', views.verify_asset_entry, name='verify_asset_entry'),
+
 
     
 ]
