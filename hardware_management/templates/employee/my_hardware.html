@@ -13,9 +13,9 @@
                 <h2 class="fw-bold text-dark"><i class="bi bi-laptop me-2 text-primary"></i>My Hardware</h2>
             </div>
             <div class="mt-2 mt-sm-0">
-                <a href="{% url 'export_my_hardware_excel' %}" class="btn btn-success me-2" title="Download Excel Report">
+                <!-- <a href="{% url 'export_my_hardware_excel' %}" class="btn btn-success me-2" title="Download Excel Report">
                     <i class="bi bi-file-excel"></i> Export to Excel
-                </a>
+                </a> -->
                 <a href="{% url 'employee_dashboard' %}" class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-left"></i> Back to Dashboard
                 </a>
@@ -57,7 +57,7 @@
                     </div>
                 </div>
                 <div class="mt-3">
-                    <span class="text-muted small">Serials verified</span>
+                    <span class="text-muted small">Assets verified</span>
                 </div>
             </div>
         </div>
@@ -108,8 +108,8 @@
         <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
             <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
             <div>
-                <strong>Attention!</strong> You have <strong>{{ mismatch_count }}</strong> item(s) with serial number mismatch. 
-                Please verify and correct the entered serial numbers.
+                <strong>Attention!</strong> You have <strong>{{ mismatch_count }}</strong> item(s) with asset number mismatch. 
+                Please verify and correct the entered asset numbers.
             </div>
             <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
         </div>
@@ -139,7 +139,7 @@
                 <i class="bi bi-laptop me-1"></i> {{ assignment.hardware_count }} Items
             </span>
             <a href="{% url 'enter_serial_numbers' assignment.id %}" class="btn btn-sm btn-primary">
-                <i class="bi bi-upc-scan"></i> Enter Serials
+                <i class="bi bi-upc-scan"></i> Enter Assets
             </a>
         </div>
     </div>
@@ -196,9 +196,9 @@
                     <tr>
                         <th class="px-3">#</th>
                         <th>Hardware Type</th>
-                        <th>Model</th>
-                        <th>Brand</th>
-                        <th>Assigned Serial</th>
+                        <!-- <th>Model</th>
+                        <th>Brand</th> -->
+                        <th>Serial Number</th>
                         <th>Your Entry</th>
                         <th>Status</th>
                         <th>Verification</th>
@@ -212,15 +212,15 @@
                         <td>
                             <strong class="text-dark">{{ item.hardware_type }}</strong>
                         </td>
-                        <td>{{ item.model }}</td>
-                        <td>{{ item.brand|default:"-" }}</td>
+                        <!-- <td>{{ item.model }}</td>
+                        <td>{{ item.brand|default:"-" }}</td> -->
                         <td>
-                            <code class="bg-light p-1 rounded">{{ item.expected_serial }}</code>
+                            <code class="bg-light p-1 rounded">{{ item.serial_number }}</code>
                         </td>
                         <td>
-                            {% if item.serial_number %}
-                                <code class="{% if item.serial_number == item.expected_serial %}text-success{% else %}text-danger{% endif %} fw-bold bg-light p-1 rounded">
-                                    {{ item.serial_number }}
+                            {% if item.entered_asset %}
+                                <code class="{% if item.entered_asset == item.expected_asset %}text-success{% else %}text-danger{% endif %} fw-bold bg-light p-1 rounded">
+                                    {{ item.entered_asset }}
                                 </code>
                                 {% if item.entered_at %}
                                 <br>
@@ -235,8 +235,8 @@
                                 <span class="badge bg-success text-white px-3 py-2">
                                     <i class="bi bi-check-circle"></i> Verified
                                 </span>
-                            {% elif item.serial_number %}
-                                {% if item.serial_number == item.expected_serial %}
+                            {% elif item.entered_asset %}
+                                {% if item.entered_asset == item.expected_asset %}
                                     <span class="badge bg-info text-white px-3 py-2">
                                         <i class="bi bi-check2"></i> Matched
                                     </span>
@@ -257,7 +257,7 @@
                                 {% if item.verified_by %}
                                 <small class="text-muted">by {{ item.verified_by.get_full_name|default:item.verified_by.username|truncatechars:10 }}</small>
                                 {% endif %}
-                            {% elif item.serial_number and item.serial_number == item.expected_serial %}
+                            {% elif item.entered_asset and item.entered_asset == item.expected_asset %}
                                 <small class="text-info"><i class="bi bi-check2"></i> Ready</small>
                             {% else %}
                                 <small class="text-muted"><i class="bi bi-clock"></i> Action</small>
@@ -265,10 +265,10 @@
                         </td>
                         <td class="px-3">
                             <div class="d-flex gap-2">
-                                {% if not item.serial_number %}
+                                {% if not item.entered_asset %}
                                 <a href="{% url 'enter_serial_numbers' assignment.id %}" 
                                    class="btn btn-sm btn-outline-primary"
-                                   title="Enter Serial Number">
+                                   title="Enter Asset Number">
                                     <i class="bi bi-pencil"></i>
                                 </a>
                                 {% endif %}
@@ -300,7 +300,7 @@
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0">
             <div class="modal-header border-0 text-white" 
-                 style="background: {% if item.verified %}linear-gradient(135deg, #28a745, #20c997){% elif item.serial_number and item.serial_number == item.expected_serial %}linear-gradient(135deg, #17a2b8, #0dcaf0){% elif item.serial_number %}linear-gradient(135deg, #dc3545, #e74c3c){% else %}linear-gradient(135deg, #ffc107, #fd7e14){% endif %};">
+                 style="background: {% if item.verified %}linear-gradient(135deg, #28a745, #20c997){% elif item.entered_asset and item.entered_asset == item.expected_asset %}linear-gradient(135deg, #17a2b8, #0dcaf0){% elif item.entered_asset %}linear-gradient(135deg, #dc3545, #e74c3c){% else %}linear-gradient(135deg, #ffc107, #fd7e14){% endif %};">
                 <h5 class="modal-title text-white">
                     <i class="bi bi-info-circle me-2"></i>Hardware Details
                 </h5>
@@ -313,12 +313,12 @@
                             <i class="bi bi-laptop" style="font-size: 3.5rem; color: #E04D00;"></i>
                         </div>
                         <h5 class="mt-3 fw-bold">{{ item.hardware_type }}</h5>
-                        <span class="badge bg-{% if item.verified %}success{% elif item.serial_number and item.serial_number == item.expected_serial %}info{% elif item.serial_number %}danger{% else %}warning{% endif %} text-white px-3 py-2 mt-2">
+                        <span class="badge bg-{% if item.verified %}success{% elif item.entered_asset and item.entered_asset == item.expected_asset %}info{% elif item.entered_asset %}danger{% else %}warning{% endif %} text-white px-3 py-2 mt-2">
                             {% if item.verified %}
                                 <i class="bi bi-check-circle"></i> Verified
-                            {% elif item.serial_number and item.serial_number == item.expected_serial %}
+                            {% elif item.entered_asset and item.entered_asset == item.expected_asset %}
                                 <i class="bi bi-check2"></i> Matched
-                            {% elif item.serial_number %}
+                            {% elif item.entered_asset %}
                                 <i class="bi bi-x-circle"></i> Mismatch
                             {% else %}
                                 <i class="bi bi-clock"></i> Pending
@@ -328,10 +328,10 @@
                     <div class="col-md-8">
                         <div class="bg-light p-3 rounded-3">
                             <table class="table table-borderless mb-0">
-                                <tr>
+                                <!-- <tr>
                                     <th width="35%" class="text-muted">Assignment ID:</th>
                                     <td><code class="bg-white">{{ assignment.assignment_id|slice:"0:8" }}</code></td>
-                                </tr>
+                                </tr> -->
                                 <tr>
                                     <th class="text-muted">Project:</th>
                                     <td class="fw-semibold">{{ assignment.project.project_name }}</td>
@@ -344,30 +344,34 @@
                                     <th class="text-muted">Hardware Type:</th>
                                     <td>{{ item.hardware_type }}</td>
                                 </tr>
-                                <tr>
+                                <!-- <tr>
                                     <th class="text-muted">Model:</th>
                                     <td>{{ item.model }}</td>
-                                </tr>
-                                <tr>
+                                </tr> -->
+                                <!-- <tr>
                                     <th class="text-muted">Brand:</th>
                                     <td>{{ item.brand|default:"Not specified" }}</td>
+                                </tr> -->
+                                <tr>
+                                    <th class="text-muted">Serial Number:</th>
+                                    <td><code class="bg-white">{{ item.serial_number }}</code></td>
                                 </tr>
                                 <tr>
-                                    <th class="text-muted">Assigned Serial:</th>
-                                    <td><code class="bg-white">{{ item.expected_serial }}</code></td>
-                                </tr>
-                                <tr>
-                                    <th class="text-muted">Your Entry:</th>
+                                    <th class="text-muted">Entered Asset:</th>
                                     <td>
-                                        {% if item.serial_number %}
-                                            <code class="{% if item.serial_number == item.expected_serial %}text-success{% else %}text-danger{% endif %} fw-bold bg-white">
-                                                {{ item.serial_number }}
+                                        {% if item.entered_asset %}
+                                            <code class="{% if item.entered_asset == item.expected_asset %}text-success{% else %}text-danger{% endif %} fw-bold bg-white">
+                                                {{ item.entered_asset }}
                                             </code>
                                         {% else %}
                                             <span class="text-muted">Not entered yet</span>
                                         {% endif %}
                                     </td>
                                 </tr>
+                                <!-- <tr>
+                                    <th class="text-muted">Expected Asset:</th>
+                                    <td><code class="bg-white">{{ item.expected_asset }}</code></td>
+                                </tr> -->
                                 {% if item.entered_at %}
                                 <tr>
                                     <th class="text-muted">Entered On:</th>
@@ -390,26 +394,26 @@
                 </div>
                 
                 <div class="mt-4">
-                    {% if not item.serial_number %}
+                    {% if not item.entered_asset %}
                     <div class="alert alert-warning d-flex align-items-center mb-0">
                         <i class="bi bi-exclamation-triangle-fill me-2 fs-4"></i>
                         <div>
-                            <strong>Action Required:</strong> You need to enter the serial number for this hardware item.
+                            <strong>Action Required:</strong> You need to enter the asset number for this hardware item.
                         </div>
                     </div>
-                    {% elif item.serial_number and item.serial_number != item.expected_serial %}
+                    {% elif item.entered_asset and item.entered_asset != item.expected_asset %}
                     <div class="alert alert-danger d-flex align-items-center mb-0">
                         <i class="bi bi-x-circle-fill me-2 fs-4"></i>
                         <div>
-                            <strong>Mismatch Detected:</strong> The serial number you entered does not match the assigned hardware.
-                            Please verify and re-enter the correct serial number.
+                            <strong>Mismatch Detected:</strong> The asset number you entered does not match the assigned hardware.
+                            Please verify and re-enter the correct asset number.
                         </div>
                     </div>
-                    {% elif item.serial_number and not item.verified %}
+                    {% elif item.entered_asset and not item.verified %}
                     <div class="alert alert-info d-flex align-items-center mb-0">
                         <i class="bi bi-check2-circle me-2 fs-4"></i>
                         <div>
-                            <strong>Ready for Verification:</strong> Your serial number matches. Waiting for manager verification.
+                            <strong>Ready for Verification:</strong> Your asset number matches. Waiting for manager verification.
                         </div>
                     </div>
                     {% else %}
@@ -424,9 +428,9 @@
             </div>
             <div class="modal-footer border-0 bg-light">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
-                {% if not item.serial_number %}
+                {% if not item.entered_asset %}
                 <a href="{% url 'enter_serial_numbers' assignment.id %}" class="btn btn-primary">
-                    <i class="bi bi-pencil"></i> Enter Serial Number
+                    <i class="bi bi-pencil"></i> Enter Asset Number
                 </a>
                 {% endif %}
             </div>
@@ -484,15 +488,8 @@
                                 <td>{{ assignment.assigned_date|date:"d/m/Y" }}</td>
                                 <td>{{ assignment.actual_return_date|date:"d/m/Y" }}</td>
                                 <td><span class="badge bg-secondary text-white px-3 py-2">{{ assignment.hardware_count }}</span></td>
-                             <td class="px-3">
+                                <td class="px-3">
                                     <div class="d-flex gap-2">
-                                        {% if not assignment.actual_return_date %}
-                                        <a href="{% url 'enter_serial_numbers' assignment.id %}" 
-                                           class="btn btn-sm btn-primary">
-                                            <i class="bi bi-upc-scan"></i>
-                                            <span class="d-none d-xl-inline ms-1">Enter</span>
-                                        </a>
-                                        {% endif %}
                                         <a href="{% url 'my_assignment_details' assignment.id %}" 
                                            class="btn btn-sm btn-outline-secondary">
                                             <i class="bi bi-eye"></i>
