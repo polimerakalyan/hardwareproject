@@ -1575,18 +1575,16 @@ def project_assignments(request, project_id):
     return render(request, 'manager/project_assignments.html', context)
 
 
+
 def export_project_hardware_excel(project, hardware_details_list, total_hardware, active_hardware, assigned_hardware, hardware_by_type):
-    """Export project hardware details to Excel with employee-wise hardware details"""
+    """Export project hardware details to Excel with employee grouping and filterable format"""
     
     wb = openpyxl.Workbook()
     
     # Define styles
-    header_font = Font(bold=True, color="FFFFFF", size=12)
+    header_font = Font(bold=True, color="FFFFFF", size=11)
     header_fill = PatternFill(start_color="E04D00", end_color="E04D00", fill_type="solid")
-    subheader_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
-    success_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
-    warning_fill = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
-    info_fill = PatternFill(start_color="DDEBF7", end_color="DDEBF7", fill_type="solid")
+    employee_bg = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
     border = Border(
         left=Side(style='thin'),
         right=Side(style='thin'),
@@ -1596,11 +1594,11 @@ def export_project_hardware_excel(project, hardware_details_list, total_hardware
     center_alignment = Alignment(horizontal='center', vertical='center')
     left_alignment = Alignment(horizontal='left', vertical='center')
     
-    # Remove the default sheet (Hardware Assignment Details)
+    # Remove default sheet
     wb.remove(wb.active)
     
-    # ========== SHEET 1: Employee-Wise Hardware Details ==========
-    ws_employee = wb.create_sheet("Employee Wise Hardware")
+    # ========== SHEET 1: Hardware Details (Grouped by Employee with Gaps) ==========
+    ws_data = wb.create_sheet("Hardware Details")
     
     # Group hardware by employee
     employee_hardware = {}
@@ -1610,142 +1608,283 @@ def export_project_hardware_excel(project, hardware_details_list, total_hardware
             employee_hardware[emp_name] = {
                 'email': hardware['employee_email'],
                 'exam_city': hardware['exam_city'],
+                'exam_center_name': hardware.get('exam_center_name', 'Not specified'),
                 'hardware_list': []
             }
         employee_hardware[emp_name]['hardware_list'].append(hardware)
     
-    # Write headers for employee-wise sheet
-    emp_headers = ['S.No', 'Employee Name', 'Email', 'Exam City', 'Hardware Type', 'Serial Number', 'Model', 'Brand', 'Status', 'Verification']
+    # Headers - Updated to include Exam Center
+    headers = ['S.No', 'Employee Name', 'Email', 'Exam City', 'Exam Center', 'Hardware Type', 'Asset Number', 'Entered Asset', 'Serial Number', 'Status', 'Verification']
     
-    for col, header in enumerate(emp_headers, 1):
-        cell = ws_employee.cell(row=1, column=col, value=header)
+    # Write main headers (Row 1)
+    for col, header in enumerate(headers, 1):
+        cell = ws_data.cell(row=1, column=col, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = center_alignment
+        cell.border = border
+    
+    current_row = 2
+    global_sno = 1
+    
+    for emp_name, emp_data in sorted(employee_hardware.items()):
+        # Employee Header Row (merged across all columns)
+        ws_data.merge_cells(f'A{current_row}:K{current_row}')
+        emp_header_cell = ws_data.cell(row=current_row, column=1, value=f"👤 EMPLOYEE: {emp_name}")
+        emp_header_cell.font = Font(bold=True, size=12, color="FFFFFF")
+        emp_header_cell.fill = employee_bg
+        emp_header_cell.alignment = left_alignment
+        emp_header_cell.border = border
+        current_row += 1
+        
+        # Write each hardware item as a complete row (with employee info repeated)
+        for hardware in emp_data['hardware_list']:
+            asset_number = hardware.get('asset_number', 'N/A')
+            entered_asset = hardware.get('entered_asset', 'Not Entered')
+            exam_center_name = hardware.get('exam_center_name', 'Not specified')
+            
+            # S.No
+            ws_data.cell(row=current_row, column=1, value=global_sno).border = border
+            # Employee info (repeated for filtering)
+            ws_data.cell(row=current_row, column=2, value=emp_name).border = border
+            ws_data.cell(row=current_row, column=3, value=emp_data['email']).border = border
+            ws_data.cell(row=current_row, column=4, value=emp_data['exam_city']).border = border
+            ws_data.cell(row=current_row, column=5, value=exam_center_name).border = border
+            # Hardware info
+            ws_data.cell(row=current_row, column=6, value=hardware['hardware_type']).border = border
+            ws_data.cell(row=current_row, column=7, value=asset_number).border = border
+            
+            # Entered Asset with color coding
+            entered_cell = ws_data.cell(row=current_row, column=8, value=entered_asset)
+            if entered_asset != 'Not Entered' and entered_asset != 'N/A':
+                if entered_asset == asset_number:
+                    entered_cell.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+                    entered_cell.font = Font(color="006100", bold=True)
+                else:
+                    entered_cell.fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+                    entered_cell.font = Font(color="9C0006", bold=True)
+            entered_cell.border = border
+            
+            ws_data.cell(row=current_row, column=9, value=hardware['serial_number']).border = border
+            
+            # Status with color
+            status_cell = ws_data.cell(row=current_row, column=10, value=hardware['status'])
+            if hardware['status'] == 'In Use':
+                status_cell.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+                status_cell.font = Font(color="006100", bold=True)
+            else:
+                status_cell.fill = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
+                status_cell.font = Font(color="9C5700", bold=True)
+            status_cell.border = border
+            
+            # Verification with color
+            verify_cell = ws_data.cell(row=current_row, column=11, value=hardware['verification_status'])
+            if hardware['verification_status'] == 'Verified':
+                verify_cell.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+                verify_cell.font = Font(color="006100", bold=True)
+            elif hardware['verification_status'] == 'Matched - Pending':
+                verify_cell.fill = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
+                verify_cell.font = Font(color="9C5700", bold=True)
+            elif hardware['verification_status'] == 'Mismatch':
+                verify_cell.fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+                verify_cell.font = Font(color="9C0006", bold=True)
+            else:
+                verify_cell.fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+                verify_cell.font = Font(color="9C0006", bold=True)
+            verify_cell.border = border
+            
+            current_row += 1
+            global_sno += 1
+        
+        # Employee Summary Row
+        total_items = len(emp_data['hardware_list'])
+        emp_verified = sum(1 for h in emp_data['hardware_list'] if h['verification_status'] == 'Verified')
+        emp_matched = sum(1 for h in emp_data['hardware_list'] if h['verification_status'] == 'Matched - Pending')
+        emp_mismatch = sum(1 for h in emp_data['hardware_list'] if h['verification_status'] == 'Mismatch')
+        emp_not_entered = total_items - emp_verified - emp_matched - emp_mismatch
+        
+        ws_data.merge_cells(f'A{current_row}:E{current_row}')
+        summary_label = ws_data.cell(row=current_row, column=1, value=f"📊 Summary for {emp_name}:")
+        summary_label.font = Font(bold=True, size=10)
+        summary_label.fill = PatternFill(start_color="DDEBF7", end_color="DDEBF7", fill_type="solid")
+        
+        ws_data.merge_cells(f'F{current_row}:K{current_row}')
+        summary_value = ws_data.cell(row=current_row, column=6, value=f"Total: {total_items} | Verified: {emp_verified} | Matched: {emp_matched} | Mismatch: {emp_mismatch} | Not Entered: {emp_not_entered}")
+        summary_value.fill = PatternFill(start_color="DDEBF7", end_color="DDEBF7", fill_type="solid")
+        
+        for col in range(1, 12):
+            ws_data.cell(row=current_row, column=col).border = border
+        current_row += 1
+        
+        # Add 2 empty rows as gap between employees
+        current_row += 2
+    
+    # Enable AutoFilter on the entire data range
+    ws_data.auto_filter.ref = f"A1:K{current_row-1}"
+    
+    # Freeze header row
+    ws_data.freeze_panes = 'A2'
+    
+    # Auto-adjust column widths
+    for col in range(1, len(headers) + 1):
+        max_length = len(headers[col-1])
+        for row_idx in range(2, current_row):
+            cell_value = ws_data.cell(row=row_idx, column=col).value
+            if cell_value and cell_value != "📊 Summary":
+                max_length = max(max_length, len(str(cell_value)))
+        adjusted_width = min(max_length + 3, 30)
+        ws_data.column_dimensions[get_column_letter(col)].width = adjusted_width
+    
+    # Set row heights
+    ws_data.row_dimensions[1].height = 25
+    
+    # ========== SHEET 2: Employee Summary (Flat, Filterable) ==========
+    ws_summary = wb.create_sheet("Employee Summary")
+    
+    # Group by employee for summary
+    employee_summary = {}
+    for hardware in hardware_details_list:
+        emp_name = hardware['employee_name']
+        if emp_name not in employee_summary:
+            employee_summary[emp_name] = {
+                'email': hardware['employee_email'],
+                'exam_city': hardware['exam_city'],
+                'exam_center_name': hardware.get('exam_center_name', 'Not specified'),
+                'total': 0,
+                'verified': 0,
+                'matched': 0,
+                'mismatch': 0,
+                'not_entered': 0,
+                'in_use': 0,
+                'assigned': 0
+            }
+        employee_summary[emp_name]['total'] += 1
+        if hardware['verification_status'] == 'Verified':
+            employee_summary[emp_name]['verified'] += 1
+        elif hardware['verification_status'] == 'Matched - Pending':
+            employee_summary[emp_name]['matched'] += 1
+        elif hardware['verification_status'] == 'Mismatch':
+            employee_summary[emp_name]['mismatch'] += 1
+        else:
+            employee_summary[emp_name]['not_entered'] += 1
+        
+        if hardware['status'] == 'In Use':
+            employee_summary[emp_name]['in_use'] += 1
+        else:
+            employee_summary[emp_name]['assigned'] += 1
+    
+    # Summary headers - Updated with Exam Center
+    sum_headers = ['S.No', 'Employee Name', 'Email', 'Exam City', 'Exam Center', 'Total Items', 'In Use', 'Assigned', 
+                   'Verified', 'Matched', 'Mismatch', 'Not Entered', 'Completion %']
+    
+    for col, header in enumerate(sum_headers, 1):
+        cell = ws_summary.cell(row=1, column=col, value=header)
         cell.font = header_font
         cell.fill = header_fill
         cell.alignment = center_alignment
         cell.border = border
     
     row = 2
-    sno = 1
-    for emp_name, emp_data in sorted(employee_hardware.items()):
-        # Write employee name as a merged cell across all columns
-        ws_employee.merge_cells(f'A{row}:J{row}')
-        cell = ws_employee.cell(row=row, column=1, value=f"👤 EMPLOYEE: {emp_name}")
-        cell.font = Font(bold=True, size=12, color="FFFFFF")
-        cell.fill = subheader_fill
-        cell.alignment = left_alignment
-        cell.border = border
+    for idx, (emp_name, data) in enumerate(sorted(employee_summary.items()), 1):
+        completion = (data['verified'] / data['total'] * 100) if data['total'] > 0 else 0
+        
+        ws_summary.cell(row=row, column=1, value=idx).border = border
+        ws_summary.cell(row=row, column=2, value=emp_name).border = border
+        ws_summary.cell(row=row, column=3, value=data['email']).border = border
+        ws_summary.cell(row=row, column=4, value=data['exam_city']).border = border
+        ws_summary.cell(row=row, column=5, value=data['exam_center_name']).border = border
+        ws_summary.cell(row=row, column=6, value=data['total']).border = border
+        ws_summary.cell(row=row, column=7, value=data['in_use']).border = border
+        ws_summary.cell(row=row, column=8, value=data['assigned']).border = border
+        ws_summary.cell(row=row, column=9, value=data['verified']).border = border
+        ws_summary.cell(row=row, column=10, value=data['matched']).border = border
+        ws_summary.cell(row=row, column=11, value=data['mismatch']).border = border
+        ws_summary.cell(row=row, column=12, value=data['not_entered']).border = border
+        
+        comp_cell = ws_summary.cell(row=row, column=13, value=f"{completion:.1f}%")
+        if completion == 100:
+            comp_cell.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+            comp_cell.font = Font(color="006100", bold=True)
+        elif completion >= 50:
+            comp_cell.fill = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
+            comp_cell.font = Font(color="9C5700", bold=True)
+        else:
+            comp_cell.fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+            comp_cell.font = Font(color="9C0006", bold=True)
+        comp_cell.border = border
+        
         row += 1
-        
-        # Write employee details row
-        ws_employee.cell(row=row, column=1, value="").border = border
-        ws_employee.cell(row=row, column=2, value=emp_name).font = Font(bold=True)
-        ws_employee.cell(row=row, column=3, value=emp_data['email']).border = border
-        ws_employee.cell(row=row, column=4, value=emp_data['exam_city']).border = border
-        for col in range(5, 11):
-            ws_employee.cell(row=row, column=col, value="").border = border
-        
-        # Apply background color for employee info row
-        for col in range(1, 11):
-            ws_employee.cell(row=row, column=col).fill = info_fill
-        
-        row += 1
-        
-        # Write hardware headers
-        hw_headers = ['', '', '', '', 'Hardware Type', 'Serial Number', 'Model', 'Brand', 'Status', 'Verification']
-        for col, header in enumerate(hw_headers, 1):
-            cell = ws_employee.cell(row=row, column=col, value=header)
-            cell.font = Font(bold=True)
-            cell.fill = PatternFill(start_color="FDE4D3", end_color="FDE4D3", fill_type="solid")
-            cell.alignment = center_alignment
-            cell.border = border
-        row += 1
-        
-        # Write hardware items for this employee
-        for hardware in emp_data['hardware_list']:
-            ws_employee.cell(row=row, column=1, value=sno).border = border
-            ws_employee.cell(row=row, column=2, value="").border = border
-            ws_employee.cell(row=row, column=3, value="").border = border
-            ws_employee.cell(row=row, column=4, value="").border = border
-            ws_employee.cell(row=row, column=5, value=hardware['hardware_type']).border = border
-            ws_employee.cell(row=row, column=6, value=hardware['serial_number']).border = border
-            ws_employee.cell(row=row, column=7, value=hardware['model']).border = border
-            ws_employee.cell(row=row, column=8, value=hardware['brand']).border = border
-            
-            # Status cell with color
-            status_cell = ws_employee.cell(row=row, column=9, value=hardware['status'])
-            if hardware['status'] == 'In Use':
-                status_cell.fill = success_fill
-            else:
-                status_cell.fill = warning_fill
-            status_cell.border = border
-            
-            # Verification cell with color
-            verify_cell = ws_employee.cell(row=row, column=10, value=hardware['verification_status'])
-            if hardware['verification_status'] == 'Verified':
-                verify_cell.fill = success_fill
-            elif hardware['verification_status'] == 'Pending':
-                verify_cell.fill = warning_fill
-            verify_cell.border = border
-            
-            row += 1
-            sno += 1
-        
-        # Add employee summary row
-        total_items = len(emp_data['hardware_list'])
-        emp_verified = sum(1 for h in emp_data['hardware_list'] if h['verification_status'] == 'Verified')
-        emp_pending = sum(1 for h in emp_data['hardware_list'] if h['verification_status'] == 'Pending')
-        
-        ws_employee.merge_cells(f'A{row}:D{row}')
-        ws_employee.cell(row=row, column=1, value=f"📊 Summary for {emp_name}:").font = Font(bold=True)
-        ws_employee.cell(row=row, column=5, value=f"Total: {total_items} | Verified: {emp_verified} | Pending: {emp_pending}")
-        ws_employee.merge_cells(f'E{row}:J{row}')
-        
-        for col in range(1, 11):
-            ws_employee.cell(row=row, column=col).fill = info_fill
-            ws_employee.cell(row=row, column=col).border = border
-        
-        row += 2  # Add empty space between employees
     
-    # Auto-adjust column widths for employee sheet
-    for col in range(1, len(emp_headers) + 1):
-        max_length = len(emp_headers[col-1])
+    # Enable filter on summary sheet
+    ws_summary.auto_filter.ref = f"A1:M{row-1}"
+    ws_summary.freeze_panes = 'A2'
+    
+    # Auto-adjust column widths
+    for col in range(1, len(sum_headers) + 1):
+        max_length = len(sum_headers[col-1])
         for row_idx in range(2, row):
-            cell_value = ws_employee.cell(row=row_idx, column=col).value
+            cell_value = ws_summary.cell(row=row_idx, column=col).value
             if cell_value:
                 max_length = max(max_length, len(str(cell_value)))
-        adjusted_width = min(max_length + 3, 25)
-        ws_employee.column_dimensions[get_column_letter(col)].width = adjusted_width
+        adjusted_width = min(max_length + 3, 30)
+        ws_summary.column_dimensions[get_column_letter(col)].width = adjusted_width
     
-    # ========== SHEET 2: Project Summary ==========
-    ws_summary = wb.create_sheet("Project Summary")
+    # ========== SHEET 3: Hardware by Type ==========
+    ws_type = wb.create_sheet("Hardware by Type")
     
-    # Get unique hardware types
-    all_hardware_types = sorted(set([hw['hardware_type'] for hw in hardware_details_list]))
+    type_summary = {}
+    for hardware in hardware_details_list:
+        hw_type = hardware['hardware_type']
+        if hw_type not in type_summary:
+            type_summary[hw_type] = 0
+        type_summary[hw_type] += 1
     
-    # Calculate statistics
-    verified_count = sum(1 for h in hardware_details_list if h['verification_status'] == 'Verified')
-    pending_count = sum(1 for h in hardware_details_list if h['verification_status'] == 'Pending')
-    not_entered_count = sum(1 for h in hardware_details_list if h['verification_status'] == 'Not Entered')
+    type_headers = ['Hardware Type', 'Count', 'Percentage', 'Visual']
     
-    # Title
-    ws_summary.merge_cells('A1:C1')
-    ws_summary['A1'] = f'PROJECT SUMMARY - {project.project_name}'
-    ws_summary['A1'].font = Font(bold=True, size=14)
-    ws_summary['A1'].alignment = center_alignment
+    for col, header in enumerate(type_headers, 1):
+        cell = ws_type.cell(row=1, column=col, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = center_alignment
+        cell.border = border
     
-    ws_summary.merge_cells('A2:C2')
-    ws_summary['A2'] = f'Generated on: {datetime.now().strftime("%d-%m-%Y at %H:%M:%S")}'
-    ws_summary['A2'].alignment = center_alignment
-    ws_summary['A2'].font = Font(italic=True, size=10)
+    row = 2
+    for hw_type, count in sorted(type_summary.items(), key=lambda x: x[1], reverse=True):
+        percentage = (count / len(hardware_details_list) * 100) if hardware_details_list else 0
+        
+        ws_type.cell(row=row, column=1, value=hw_type).border = border
+        ws_type.cell(row=row, column=2, value=count).border = border
+        ws_type.cell(row=row, column=3, value=f"{percentage:.1f}%").border = border
+        
+        # Progress bar
+        bar_length = int(percentage / 5)
+        bar = "█" * bar_length + "░" * (20 - bar_length)
+        ws_type.cell(row=row, column=4, value=bar).border = border
+        
+        row += 1
     
-    # Project Information Section
-    ws_summary.merge_cells('A4:C4')
-    ws_summary['A4'] = '📋 PROJECT INFORMATION'
-    ws_summary['A4'].font = Font(bold=True, size=12, color="FFFFFF")
-    ws_summary['A4'].fill = subheader_fill
-    ws_summary['A4'].alignment = center_alignment
+    ws_type.column_dimensions['A'].width = 25
+    ws_type.column_dimensions['B'].width = 15
+    ws_type.column_dimensions['C'].width = 15
+    ws_type.column_dimensions['D'].width = 25
     
-    project_info = [
+    # ========== SHEET 4: Project Information ==========
+    ws_info = wb.create_sheet("Project Info")
+    
+    info_headers = ['Field', 'Value']
+    for col, header in enumerate(info_headers, 1):
+        cell = ws_info.cell(row=1, column=col, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = center_alignment
+        cell.border = border
+    
+    verified_total = sum(1 for h in hardware_details_list if h['verification_status'] == 'Verified')
+    matched_total = sum(1 for h in hardware_details_list if h['verification_status'] == 'Matched - Pending')
+    mismatch_total = sum(1 for h in hardware_details_list if h['verification_status'] == 'Mismatch')
+    not_entered_total = len(hardware_details_list) - verified_total - matched_total - mismatch_total
+    
+    project_details = [
         ['Project ID', project.project_id],
         ['Project Name', project.project_name],
         ['Location', project.location],
@@ -1753,106 +1892,44 @@ def export_project_hardware_excel(project, hardware_details_list, total_hardware
         ['End Date', project.end_date.strftime("%d-%m-%Y")],
         ['Duration', f'{(project.end_date - project.start_date).days} days'],
         ['Created By', project.created_by.get_full_name() or project.created_by.username],
-    ]
-    
-    row = 5
-    for info in project_info:
-        ws_summary.cell(row=row, column=1, value=info[0]).font = Font(bold=True)
-        ws_summary.cell(row=row, column=1).fill = info_fill
-        ws_summary.cell(row=row, column=2, value=info[1])
-        ws_summary.merge_cells(f'B{row}:C{row}')
-        for col in range(1, 4):
-            ws_summary.cell(row=row, column=col).border = border
-        row += 1
-    
-    # Hardware Statistics Section
-    row += 1
-    ws_summary.merge_cells(f'A{row}:C{row}')
-    ws_summary[f'A{row}'] = '🔧 HARDWARE STATISTICS'
-    ws_summary[f'A{row}'].font = Font(bold=True, size=12, color="FFFFFF")
-    ws_summary[f'A{row}'].fill = subheader_fill
-    ws_summary[f'A{row}'].alignment = center_alignment
-    row += 1
-    
-    hardware_stats = [
-        ['Total Hardware Items', len(hardware_details_list)],
-        ['Unique Hardware Types', len(all_hardware_types)],
-        ['Total Employees', len(employee_hardware)],
+        ['Created On', project.created_at.strftime("%d-%m-%Y %H:%M:%S")],
         ['', ''],
-        ['Hardware In Use', sum(1 for h in hardware_details_list if h['status'] == 'In Use')],
-        ['Hardware Assigned', sum(1 for h in hardware_details_list if h['status'] == 'Assigned')],
+        ['📊 STATISTICS', ''],
+        ['Total Hardware Items', len(hardware_details_list)],
+        ['Hardware In Use', active_hardware],
+        ['Hardware Assigned', assigned_hardware],
+        ['', ''],
+        ['✅ Verification Summary', ''],
+        ['Verified', verified_total],
+        ['Matched (Pending)', matched_total],
+        ['Mismatch', mismatch_total],
+        ['Not Entered', not_entered_total],
+        ['', ''],
+        ['Completion Rate', f"{(verified_total / len(hardware_details_list) * 100):.1f}%" if hardware_details_list else "0%"],
     ]
     
-    for stat in hardware_stats:
-        if stat[0]:
-            ws_summary.cell(row=row, column=1, value=stat[0]).font = Font(bold=True)
-            ws_summary.cell(row=row, column=1).fill = info_fill
-            ws_summary.cell(row=row, column=2, value=stat[1])
-            ws_summary.merge_cells(f'C{row}:C{row}')
-            for col in range(1, 4):
-                ws_summary.cell(row=row, column=col).border = border
+    row = 2
+    for detail in project_details:
+        if detail[0] in ['📊 STATISTICS', '✅ Verification Summary']:
+            cell = ws_info.cell(row=row, column=1, value=detail[0])
+            cell.font = Font(bold=True, size=11, color="FFFFFF")
+            cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+            ws_info.merge_cells(f'A{row}:B{row}')
+            cell.alignment = center_alignment
             row += 1
         else:
+            ws_info.cell(row=row, column=1, value=detail[0]).border = border
+            ws_info.cell(row=row, column=2, value=detail[1]).border = border
+            if detail[0]:
+                ws_info.cell(row=row, column=1).font = Font(bold=True)
             row += 1
     
-    # Verification Status Section
-    row += 1
-    ws_summary.merge_cells(f'A{row}:C{row}')
-    ws_summary[f'A{row}'] = '✅ VERIFICATION STATUS'
-    ws_summary[f'A{row}'].font = Font(bold=True, size=12, color="FFFFFF")
-    ws_summary[f'A{row}'].fill = subheader_fill
-    ws_summary[f'A{row}'].alignment = center_alignment
-    row += 1
-    
-    verification_stats = [
-        ['Verified Items', verified_count, f'{(verified_count / len(hardware_details_list) * 100):.1f}%' if hardware_details_list else '0%'],
-        ['Pending Verification', pending_count, f'{(pending_count / len(hardware_details_list) * 100):.1f}%' if hardware_details_list else '0%'],
-        ['Not Entered', not_entered_count, f'{(not_entered_count / len(hardware_details_list) * 100):.1f}%' if hardware_details_list else '0%'],
-    ]
-    
-    for stat in verification_stats:
-        ws_summary.cell(row=row, column=1, value=stat[0]).font = Font(bold=True)
-        ws_summary.cell(row=row, column=1).fill = info_fill
-        ws_summary.cell(row=row, column=2, value=stat[1])
-        ws_summary.cell(row=row, column=3, value=stat[2])
-        for col in range(1, 4):
-            ws_summary.cell(row=row, column=col).border = border
-        row += 1
-    
-    # Hardware by Type Section
-    row += 1
-    ws_summary.merge_cells(f'A{row}:C{row}')
-    ws_summary[f'A{row}'] = '📊 HARDWARE BY TYPE'
-    ws_summary[f'A{row}'].font = Font(bold=True, size=12, color="FFFFFF")
-    ws_summary[f'A{row}'].fill = subheader_fill
-    ws_summary[f'A{row}'].alignment = center_alignment
-    row += 1
-    
-    # Headers for hardware by type
-    ws_summary.cell(row=row, column=1, value="Hardware Type").font = Font(bold=True)
-    ws_summary.cell(row=row, column=2, value="Count").font = Font(bold=True)
-    ws_summary.cell(row=row, column=3, value="Percentage").font = Font(bold=True)
-    for col in range(1, 4):
-        ws_summary.cell(row=row, column=col).fill = header_fill
-        ws_summary.cell(row=row, column=col).font = header_font
-        ws_summary.cell(row=row, column=col).border = border
-    row += 1
-    
-    for hw_type, count in sorted(hardware_by_type.items(), key=lambda x: x[1], reverse=True):
-        percentage = (count / len(hardware_details_list) * 100) if hardware_details_list else 0
-        ws_summary.cell(row=row, column=1, value=hw_type).border = border
-        ws_summary.cell(row=row, column=2, value=count).border = border
-        ws_summary.cell(row=row, column=3, value=f'{percentage:.1f}%').border = border
-        row += 1
-    
-    # Auto-adjust summary column widths
-    ws_summary.column_dimensions['A'].width = 25
-    ws_summary.column_dimensions['B'].width = 20
-    ws_summary.column_dimensions['C'].width = 20
+    ws_info.column_dimensions['A'].width = 25
+    ws_info.column_dimensions['B'].width = 35
     
     # Prepare response
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    filename = f"PROJECT_{project.project_name.replace(' ', '_')}_EMPLOYEE_HARDWARE_{timestamp}.xlsx"
+    filename = f"PROJECT_{project.project_name.replace(' ', '_')}_HARDWARE_REPORT_{timestamp}.xlsx"
     
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
