@@ -5797,6 +5797,7 @@ def reject_transfer_request(request, transfer_id):
     context = {'transfer': transfer}
     return render(request, 'manager/reject_transfer.html', context)
 
+
 @login_required
 def transfer_details(request, transfer_id):
     """View transfer details"""
@@ -5809,7 +5810,7 @@ def transfer_details(request, transfer_id):
     
     hardware_details = []
     for item in transfer_items:
-        serial_entry = None
+        asset_entry = None
         assignment_item = HardwareAssignmentItem.objects.filter(
             hardware=item.hardware,
             assignment__employee=transfer.to_employee if transfer.status == 'received' else transfer.from_employee,
@@ -5818,14 +5819,15 @@ def transfer_details(request, transfer_id):
         
         if assignment_item:
             try:
-                serial_entry = HardwareSerialEntry.objects.get(assignment_item=assignment_item)
-            except HardwareSerialEntry.DoesNotExist:
+                # FIX: Use 'hardware_item' instead of 'assignment_item'
+                asset_entry = HardwareAssetEntry.objects.get(hardware_item=assignment_item)
+            except HardwareAssetEntry.DoesNotExist:
                 pass
         
         hardware_details.append({
             'item': item,
-            'has_serial_entry': serial_entry is not None,
-            'serial_entry': serial_entry
+            'has_asset_entry': asset_entry is not None,
+            'asset_entry': asset_entry
         })
     
     total_items = transfer_items.count()
