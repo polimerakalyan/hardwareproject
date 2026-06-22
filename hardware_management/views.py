@@ -3083,6 +3083,7 @@ def view_assignments(request):
     return render(request, 'manager/view_assignments.html', context)
 
 
+
 @login_required
 def assignment_details(request, assignment_id):
     if request.user.user_type != 'manager':
@@ -3117,6 +3118,9 @@ def assignment_details(request, assignment_id):
         item.asset_number = item.hardware.asset_number if item.hardware.asset_number else 'N/A'
         item.serial_number = item.hardware.serial_number
     
+    # Get exam center name
+    exam_center_name = getattr(assignment, 'exam_center_name', None)
+    
     context = {
         'assignment': assignment,
         'items': items,
@@ -3124,8 +3128,10 @@ def assignment_details(request, assignment_id):
         'pending_count': pending_count,
         'not_entered_count': not_entered_count,
         'total_items': items.count(),
+        'exam_center_name': exam_center_name,
     }
     return render(request, 'manager/assignment_details.html', context)
+    
 @login_required
 def return_assignment(request, assignment_id):
     if request.user.user_type != 'manager':
