@@ -5705,22 +5705,8 @@ def update_transfer_status_employee(request, transfer_id):
         action = request.POST.get('action')
         notes = request.POST.get('notes', '')
         
-        if action == 'initiate' and request.user == transfer.from_employee and transfer.status == 'approved_by_manager':
-            for item in transfer.transfer_items.all():
-                item.status = 'in_transit'
-                item.transfer_date = timezone.now().date()
-                item.save()
-                
-                item.hardware.status = 'maintenance'
-                item.hardware.save()
-            
-            transfer.status = 'in_transit'
-            transfer.transfer_date = timezone.now().date()
-            transfer.save()
-            
-            messages.success(request, f'Transfer initiated! {transfer.transfer_items.count()} hardware items marked as in transit.')
-            
-        elif action == 'receive' and request.user == transfer.to_employee and transfer.status == 'in_transit':
+        # Receiver receives hardware and completes transfer in one step
+        if action == 'receive_and_complete' and request.user == transfer.to_employee and transfer.status == 'in_transit':
             transferred_count = 0
             
             for item in transfer.transfer_items.all():
@@ -5729,6 +5715,7 @@ def update_transfer_status_employee(request, transfer_id):
                 item.condition_after = notes
                 item.save()
                 
+                # ========== REMOVE HARDWARE FROM SENDER ==========
                 sender_item = HardwareAssignmentItem.objects.filter(
                     hardware=item.hardware,
                     assignment__employee=transfer.from_employee,
@@ -5737,9 +5724,9 @@ def update_transfer_status_employee(request, transfer_id):
                 
                 if sender_item:
                     sender_assignment = sender_item.assignment
-                    
                     sender_item.delete()
                     
+                    # Check if sender has any other hardware
                     remaining_items = HardwareAssignmentItem.objects.filter(
                         assignment=sender_assignment
                     ).count()
@@ -5748,29 +5735,60 @@ def update_transfer_status_employee(request, transfer_id):
                         sender_assignment.actual_return_date = timezone.now().date()
                         sender_assignment.save()
                 
+                # ========== ADD HARDWARE TO RECEIVER ==========
+                # Get or create project for receiver
+                project = transfer.to_project
+                
+                # If no project specified in transfer, check if receiver has any existing assignment
+                if not project:
+                    existing_receiver_assignment = HardwareAssignment.objects.filter(
+                        employee=transfer.to_employee,
+                        actual_return_date__isnull=True
+                    ).first()
+                    
+                    if existing_receiver_assignment:
+                        project = existing_receiver_assignment.project
+                    else:
+                        # Create a default project for the receiver if none exists
+                        from datetime import timedelta
+                        project = Project.objects.filter(created_by=request.user.manager).first()
+                        
+                        if not project:
+                            project = Project.objects.create(
+                                project_id=f"TEMP_{timezone.now().strftime('%Y%m%d%H%M%S')}",
+                                project_name=f"Transfer Project - {transfer.to_employee.username}",
+                                location=transfer.to_exam_city or 'Unknown',
+                                start_date=timezone.now().date(),
+                                end_date=timezone.now().date() + timedelta(days=365),
+                                created_by=request.user.manager
+                            )
+                
+                # Find or create receiver's assignment
                 receiver_assignment = HardwareAssignment.objects.filter(
                     employee=transfer.to_employee,
-                    project=transfer.to_project,
+                    project=project,
                     actual_return_date__isnull=True
                 ).first()
                 
                 if not receiver_assignment:
-                    sender_assignment_item = HardwareAssignmentItem.objects.filter(
-                        hardware=item.hardware,
-                        assignment__employee=transfer.from_employee,
-                        assignment__actual_return_date__isnull=True
-                    ).first()
-                    
-                    project = transfer.to_project
-                    if not project and sender_assignment_item:
-                        project = sender_assignment_item.assignment.project
+                    # Set expected_return_date based on transfer type
+                    # For both temporary and permanent, set a default date to avoid NULL
+                    if transfer.transfer_type == 'temporary':
+                        expected_return_date = transfer.expected_return_date
+                        if not expected_return_date:
+                            # Default to 30 days from now for temporary
+                            expected_return_date = timezone.now().date() + timezone.timedelta(days=30)
+                    else:
+                        # For permanent transfers, set a far future date (e.g., 2099-12-31)
+                        # This avoids NULL constraint issues
+                        expected_return_date = timezone.now().date() + timezone.timedelta(days=365 * 10)  # 10 years from now
                     
                     receiver_assignment = HardwareAssignment.objects.create(
                         employee=transfer.to_employee,
                         project=project,
-                        exam_city=transfer.to_exam_city,
+                        exam_city=transfer.to_exam_city or (transfer.from_exam_city if transfer.from_exam_city else 'Unknown'),
                         assigned_by=transfer.approved_by or request.user.manager,
-                        expected_return_date=transfer.expected_return_date if transfer.transfer_type == 'temporary' else (timezone.now().date() + timezone.timedelta(days=30)),
+                        expected_return_date=expected_return_date,
                         notes=f"Hardware transferred via Transfer ID: {transfer.transfer_id}"
                     )
                 
@@ -5791,9 +5809,13 @@ def update_transfer_status_employee(request, transfer_id):
                         condition_at_assignment=notes
                     )
                 
-                sender_serial_entry = HardwareSerialEntry.objects.filter(
-                    assignment_item=sender_item
-                ).first() if sender_item else None
+                # ========== TRANSFER SERIAL NUMBER ==========
+                sender_serial_entry = None
+                if sender_item:
+                    try:
+                        sender_serial_entry = HardwareSerialEntry.objects.get(assignment_item=sender_item)
+                    except HardwareSerialEntry.DoesNotExist:
+                        pass
                 
                 if sender_serial_entry:
                     receiver_item = HardwareAssignmentItem.objects.filter(
@@ -5817,121 +5839,167 @@ def update_transfer_status_employee(request, transfer_id):
                                 verified_at=sender_serial_entry.verified_at
                             )
                 
-                transferred_count += 1
-                
+                # Update hardware status to in_use for receiver
                 item.hardware.status = 'in_use'
                 item.hardware.save()
+                
+                transferred_count += 1
             
-            transfer.status = 'received_by_receiver'
+            # Mark transfer as completed
+            transfer.status = 'completed'
             transfer.actual_arrival_date = timezone.now().date()
+            transfer.completion_notes = notes
             transfer.save()
             
-            messages.success(request, f'{transferred_count} hardware item(s) transferred successfully to {transfer.to_employee.get_full_name() or transfer.to_employee.username}!')
+            # Create notification for sender
+            TransferNotification.objects.create(
+                transfer=transfer,
+                recipient=transfer.from_employee,
+                message=f"Transfer #{transfer.transfer_id} has been completed. Hardware has been transferred to {transfer.to_employee.get_full_name() or transfer.to_employee.username}."
+            )
             
-        elif action == 'complete' and request.user == transfer.from_employee and transfer.status == 'received_by_receiver':
-            if transfer.transfer_type == 'permanent':
-                transfer.status = 'completed'
-                transfer.save()
-                messages.success(request, 'Permanent transfer completed successfully!')
+            messages.success(request, f'{transferred_count} hardware item(s) received and transfer completed successfully!')
+        
+        # Return hardware for temporary transfers
+        elif action == 'return' and request.user == transfer.to_employee and transfer.transfer_type == 'temporary' and transfer.status == 'completed':
+            returned_count = 0
             
-            elif transfer.transfer_type == 'temporary':
-                returned_count = 0
+            for item in transfer.transfer_items.all():
+                item.status = 'returned'
+                item.return_date = timezone.now().date()
+                item.save()
                 
-                for item in transfer.transfer_items.all():
-                    item.status = 'returned'
-                    item.return_date = timezone.now().date()
-                    item.save()
+                # ========== REMOVE HARDWARE FROM RECEIVER ==========
+                receiver_item = HardwareAssignmentItem.objects.filter(
+                    hardware=item.hardware,
+                    assignment__employee=transfer.to_employee,
+                    assignment__actual_return_date__isnull=True
+                ).first()
+                
+                if receiver_item:
+                    receiver_assignment = receiver_item.assignment
+                    receiver_item.delete()
                     
-                    receiver_item = HardwareAssignmentItem.objects.filter(
-                        hardware=item.hardware,
-                        assignment__employee=transfer.to_employee,
-                        assignment__actual_return_date__isnull=True
-                    ).first()
+                    remaining_items = HardwareAssignmentItem.objects.filter(
+                        assignment=receiver_assignment
+                    ).count()
                     
-                    if receiver_item:
-                        receiver_assignment = receiver_item.assignment
-                        
-                        receiver_item.delete()
-                        
-                        remaining_items = HardwareAssignmentItem.objects.filter(
-                            assignment=receiver_assignment
-                        ).count()
-                        
-                        if remaining_items == 0:
-                            receiver_assignment.actual_return_date = timezone.now().date()
-                            receiver_assignment.save()
-                    
-                    sender_assignment = HardwareAssignment.objects.filter(
+                    if remaining_items == 0:
+                        receiver_assignment.actual_return_date = timezone.now().date()
+                        receiver_assignment.save()
+                
+                # ========== RETURN HARDWARE TO SENDER ==========
+                # Get or create project for sender
+                project = transfer.from_project
+                
+                if not project:
+                    existing_sender_assignment = HardwareAssignment.objects.filter(
                         employee=transfer.from_employee,
-                        project=transfer.from_project,
                         actual_return_date__isnull=True
                     ).first()
                     
-                    if not sender_assignment:
-                        sender_assignment = HardwareAssignment.objects.create(
-                            employee=transfer.from_employee,
-                            project=transfer.from_project,
-                            exam_city=transfer.from_exam_city,
-                            assigned_by=transfer.approved_by,
-                            expected_return_date=timezone.now().date() + timezone.timedelta(days=30),
-                            notes=f"Hardware returned from {transfer.to_employee.get_full_name() or transfer.to_employee.username} - Transfer ID: {transfer.transfer_id}"
-                        )
+                    if existing_sender_assignment:
+                        project = existing_sender_assignment.project
+                    else:
+                        from datetime import timedelta
+                        project = Project.objects.filter(created_by=request.user.manager).first()
+                        
+                        if not project:
+                            project = Project.objects.create(
+                                project_id=f"TEMP_{timezone.now().strftime('%Y%m%d%H%M%S')}",
+                                project_name=f"Return Project - {transfer.from_employee.username}",
+                                location=transfer.from_exam_city or 'Unknown',
+                                start_date=timezone.now().date(),
+                                end_date=timezone.now().date() + timedelta(days=365),
+                                created_by=request.user.manager
+                            )
+                
+                sender_assignment = HardwareAssignment.objects.filter(
+                    employee=transfer.from_employee,
+                    project=project,
+                    actual_return_date__isnull=True
+                ).first()
+                
+                if not sender_assignment:
+                    # Set expected_return_date for sender (30 days from now)
+                    expected_return_date = timezone.now().date() + timezone.timedelta(days=30)
                     
-                    existing_item = HardwareAssignmentItem.objects.filter(
+                    sender_assignment = HardwareAssignment.objects.create(
+                        employee=transfer.from_employee,
+                        project=project,
+                        exam_city=transfer.from_exam_city or 'Unknown',
+                        assigned_by=transfer.approved_by,
+                        expected_return_date=expected_return_date,
+                        notes=f"Hardware returned from {transfer.to_employee.get_full_name() or transfer.to_employee.username} - Transfer ID: {transfer.transfer_id}"
+                    )
+                
+                existing_item = HardwareAssignmentItem.objects.filter(
+                    assignment=sender_assignment,
+                    hardware=item.hardware
+                ).first()
+                
+                if existing_item:
+                    existing_item.quantity += 1
+                    existing_item.save()
+                else:
+                    HardwareAssignmentItem.objects.create(
+                        assignment=sender_assignment,
+                        hardware=item.hardware,
+                        quantity=1
+                    )
+                
+                # Transfer serial number back
+                receiver_serial_entry = None
+                if receiver_item:
+                    try:
+                        receiver_serial_entry = HardwareSerialEntry.objects.get(assignment_item=receiver_item)
+                    except HardwareSerialEntry.DoesNotExist:
+                        pass
+                
+                if receiver_serial_entry:
+                    sender_item_obj = HardwareAssignmentItem.objects.filter(
                         assignment=sender_assignment,
                         hardware=item.hardware
                     ).first()
                     
-                    if existing_item:
-                        existing_item.quantity += 1
-                        existing_item.save()
-                    else:
-                        HardwareAssignmentItem.objects.create(
-                            assignment=sender_assignment,
-                            hardware=item.hardware,
-                            quantity=1,
-                            condition_at_assignment=notes
-                        )
-                    
-                    receiver_serial_entry = HardwareSerialEntry.objects.filter(
-                        assignment_item=receiver_item
-                    ).first() if receiver_item else None
-                    
-                    if receiver_serial_entry:
-                        sender_item = HardwareAssignmentItem.objects.filter(
-                            assignment=sender_assignment,
-                            hardware=item.hardware
+                    if sender_item_obj:
+                        existing_serial = HardwareSerialEntry.objects.filter(
+                            assignment_item=sender_item_obj
                         ).first()
                         
-                        if sender_item:
-                            existing_serial = HardwareSerialEntry.objects.filter(
-                                assignment_item=sender_item
-                            ).first()
-                            
-                            if not existing_serial:
-                                HardwareSerialEntry.objects.create(
-                                    assignment_item=sender_item,
-                                    serial_number=receiver_serial_entry.serial_number,
-                                    entered_by=receiver_serial_entry.entered_by,
-                                    entered_at=receiver_serial_entry.entered_at,
-                                    verified=receiver_serial_entry.verified,
-                                    verified_by=receiver_serial_entry.verified_by,
-                                    verified_at=receiver_serial_entry.verified_at
-                                )
-                    
-                    returned_count += 1
-                    item.hardware.status = 'in_use'
-                    item.hardware.save()
+                        if not existing_serial:
+                            HardwareSerialEntry.objects.create(
+                                assignment_item=sender_item_obj,
+                                serial_number=receiver_serial_entry.serial_number,
+                                entered_by=receiver_serial_entry.entered_by,
+                                entered_at=receiver_serial_entry.entered_at,
+                                verified=receiver_serial_entry.verified,
+                                verified_by=receiver_serial_entry.verified_by,
+                                verified_at=receiver_serial_entry.verified_at
+                            )
                 
-                transfer.status = 'completed'
-                transfer.return_date = timezone.now().date()
-                transfer.save()
-                
-                messages.success(request, f'Temporary transfer completed! {returned_count} hardware item(s) returned to original owner.')
+                item.hardware.status = 'in_use'
+                item.hardware.save()
+                returned_count += 1
+            
+            transfer.status = 'return_completed'
+            transfer.return_date = timezone.now().date()
+            transfer.completion_notes = notes
+            transfer.save()
+            
+            TransferNotification.objects.create(
+                transfer=transfer,
+                recipient=transfer.from_employee,
+                message=f"Transfer #{transfer.transfer_id} - Hardware has been returned by {transfer.to_employee.get_full_name() or transfer.to_employee.username}."
+            )
+            
+            messages.success(request, f'{returned_count} hardware item(s) returned successfully to {transfer.from_employee.get_full_name()}!')
         
         return redirect('transfer_tracking', transfer_id=transfer.id)
     
     return redirect('my_transfers')
+
+
 @login_required
 def manager_transfer_requests(request):
     """Manager views all transfer requests"""
@@ -5950,7 +6018,8 @@ def manager_transfer_requests(request):
     pending = transfers.filter(status='requested').count()
     approved = transfers.filter(status='approved_by_manager').count()
     in_transit = transfers.filter(status='in_transit').count()
-    received = transfers.filter(status='received_by_receiver').count()  # ADD THIS
+    received = transfers.filter(status='received_by_receiver').count()
+    returned = transfers.filter(status='return_completed').count()  # ADD RETURNED COUNT
     completed = transfers.filter(status='completed').count()
     rejected = transfers.filter(status='rejected').count()
     
@@ -5960,7 +6029,8 @@ def manager_transfer_requests(request):
         'pending': pending,
         'approved': approved,
         'in_transit': in_transit,
-        'received': received,  
+        'received': received,
+        'returned': returned,  # ADD TO CONTEXT
         'completed': completed,
         'rejected': rejected,
         'status_filter': status_filter,
@@ -5969,7 +6039,7 @@ def manager_transfer_requests(request):
 
 @login_required
 def approve_transfer_request(request, transfer_id):
-    """Manager approves transfer request"""
+    """Manager approves transfer request - Directly sets to in_transit"""
     if request.user.user_type != 'manager':
         return redirect('employee_dashboard')
     
@@ -5983,31 +6053,47 @@ def approve_transfer_request(request, transfer_id):
     if request.method == 'POST':
         manager_notes = request.POST.get('manager_notes', '')
         
-        transfer.status = 'approved_by_manager'
+        # Directly set to in_transit (skip approved_by_manager)
+        transfer.status = 'in_transit'
         transfer.approved_by = request.user
         transfer.approved_date = timezone.now()
+        transfer.transfer_date = timezone.now().date()
         transfer.manager_notes = manager_notes
         transfer.save()
         
+        # Update all transfer items to in_transit
+        for item in transfer.transfer_items.all():
+            item.status = 'in_transit'
+            item.transfer_date = timezone.now().date()
+            item.save()
+            
+            # Update hardware status to maintenance (in transit)
+            item.hardware.status = 'maintenance'
+            item.hardware.save()
+        
+        # Create transfer history record
         TransferHistory.objects.create(
             transfer=transfer,
-            status='approved_by_manager',
-            notes=f"Approved by {request.user.get_full_name()}. Notes: {manager_notes}",
+            status='in_transit',
+            notes=f"Approved by {request.user.get_full_name()}. Transfer initiated automatically. Notes: {manager_notes}",
             updated_by=request.user
         )
         
-        TransferNotification.objects.create(
-            transfer=transfer,
-            recipient=transfer.from_employee,
-            message=f"Your transfer request #{transfer.transfer_id} has been approved by manager. Please prepare the hardware for transfer."
-        )
+        # Notify receiver
         TransferNotification.objects.create(
             transfer=transfer,
             recipient=transfer.to_employee,
-            message=f"Transfer request #{transfer.transfer_id} has been approved. Please prepare to receive the hardware."
+            message=f"Transfer request #{transfer.transfer_id} has been approved and is IN TRANSIT. Please prepare to receive the hardware."
         )
         
-        messages.success(request, f'Transfer #{transfer.transfer_id} approved successfully!')
+        # Notify sender
+        TransferNotification.objects.create(
+            transfer=transfer,
+            recipient=transfer.from_employee,
+            message=f"Your transfer request #{transfer.transfer_id} has been approved and is IN TRANSIT."
+        )
+        
+        messages.success(request, f'Transfer #{transfer.transfer_id} approved and marked as IN TRANSIT!')
         return redirect('manager_transfer_requests')
     
     context = {'transfer': transfer}
@@ -6128,9 +6214,7 @@ def my_transfers(request):
         'pending_received': pending_received,
     }
     return render(request, 'employee/my_transfers.html', context)
-
-
-
+    
 @login_required
 def transfer_tracking(request, transfer_id):
     """Track transfer details and status"""
