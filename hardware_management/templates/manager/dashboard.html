@@ -2,7 +2,10 @@
 {% block title %}Manager Dashboard - Eduquity Hardware Management{% endblock %}
 
 {% block page_title %}Manager Dashboard{% endblock %}
-{% block page_subtitle %}Welcome back, {{ user.first_name|default:user.username }}! Here's an overview of your hardware management system.{% endblock %}
+{% block page_subtitle %}
+Welcome back, {{ user.first_name|default:user.username }}!
+Your Location is <strong>{{ user.branch_location|default:"Head Office" }}</strong>.
+{% endblock %}
 
 {% block content %}
 <!-- Statistics Cards -->
