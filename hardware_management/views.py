@@ -5684,7 +5684,9 @@ def request_hardware_transfer(request):
         'my_hardware': my_hardware,
         'today': timezone.now().date(),
     }
-    return render(request, 'employee/request_transfer.html', context)@login_required
+    return render(request, 'employee/request_transfer.html', context)
+    
+@login_required
 def update_transfer_status_employee(request, transfer_id):
     """Employee updates transfer status with proper hardware transfer"""
     if request.user.user_type != 'employee':
