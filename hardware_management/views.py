@@ -1594,6 +1594,7 @@ def project_assignments(request, project_id):
 
 
 
+
 def export_project_hardware_excel(project, hardware_details_list, total_hardware, active_hardware, assigned_hardware, hardware_by_type):
     """Export project hardware details to Excel with employee grouping and filterable format"""
     
@@ -1624,15 +1625,14 @@ def export_project_hardware_excel(project, hardware_details_list, total_hardware
         emp_name = hardware['employee_name']
         if emp_name not in employee_hardware:
             employee_hardware[emp_name] = {
-                'email': hardware['employee_email'],
                 'exam_city': hardware['exam_city'],
                 'exam_center_name': hardware.get('exam_center_name', 'Not specified'),
                 'hardware_list': []
             }
         employee_hardware[emp_name]['hardware_list'].append(hardware)
     
-    # Headers - Updated to include Exam Center
-    headers = ['S.No', 'Employee Name', 'Email', 'Exam City', 'Exam Center', 'Hardware Type', 'Asset Number', 'Entered Asset', 'Serial Number', 'Status', 'Verification']
+    # Headers - Updated without Employee Name and Email
+    headers = ['S.No', 'Employee Name', 'Exam City', 'Exam Center', 'Hardware Type', 'Asset Number', 'Entered Asset', 'Serial Number', 'Status', 'Verification']
     
     # Write main headers (Row 1)
     for col, header in enumerate(headers, 1):
@@ -1647,7 +1647,7 @@ def export_project_hardware_excel(project, hardware_details_list, total_hardware
     
     for emp_name, emp_data in sorted(employee_hardware.items()):
         # Employee Header Row (merged across all columns)
-        ws_data.merge_cells(f'A{current_row}:K{current_row}')
+        ws_data.merge_cells(f'A{current_row}:J{current_row}')
         emp_header_cell = ws_data.cell(row=current_row, column=1, value=f"👤 EMPLOYEE: {emp_name}")
         emp_header_cell.font = Font(bold=True, size=12, color="FFFFFF")
         emp_header_cell.fill = employee_bg
@@ -1665,15 +1665,14 @@ def export_project_hardware_excel(project, hardware_details_list, total_hardware
             ws_data.cell(row=current_row, column=1, value=global_sno).border = border
             # Employee info (repeated for filtering)
             ws_data.cell(row=current_row, column=2, value=emp_name).border = border
-            ws_data.cell(row=current_row, column=3, value=emp_data['email']).border = border
-            ws_data.cell(row=current_row, column=4, value=emp_data['exam_city']).border = border
-            ws_data.cell(row=current_row, column=5, value=exam_center_name).border = border
+            ws_data.cell(row=current_row, column=3, value=emp_data['exam_city']).border = border
+            ws_data.cell(row=current_row, column=4, value=exam_center_name).border = border
             # Hardware info
-            ws_data.cell(row=current_row, column=6, value=hardware['hardware_type']).border = border
-            ws_data.cell(row=current_row, column=7, value=asset_number).border = border
+            ws_data.cell(row=current_row, column=5, value=hardware['hardware_type']).border = border
+            ws_data.cell(row=current_row, column=6, value=asset_number).border = border
             
             # Entered Asset with color coding
-            entered_cell = ws_data.cell(row=current_row, column=8, value=entered_asset)
+            entered_cell = ws_data.cell(row=current_row, column=7, value=entered_asset)
             if entered_asset != 'Not Entered' and entered_asset != 'N/A':
                 if entered_asset == asset_number:
                     entered_cell.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
@@ -1683,10 +1682,10 @@ def export_project_hardware_excel(project, hardware_details_list, total_hardware
                     entered_cell.font = Font(color="9C0006", bold=True)
             entered_cell.border = border
             
-            ws_data.cell(row=current_row, column=9, value=hardware['serial_number']).border = border
+            ws_data.cell(row=current_row, column=8, value=hardware['serial_number']).border = border
             
             # Status with color
-            status_cell = ws_data.cell(row=current_row, column=10, value=hardware['status'])
+            status_cell = ws_data.cell(row=current_row, column=9, value=hardware['status'])
             if hardware['status'] == 'In Use':
                 status_cell.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
                 status_cell.font = Font(color="006100", bold=True)
@@ -1696,7 +1695,7 @@ def export_project_hardware_excel(project, hardware_details_list, total_hardware
             status_cell.border = border
             
             # Verification with color
-            verify_cell = ws_data.cell(row=current_row, column=11, value=hardware['verification_status'])
+            verify_cell = ws_data.cell(row=current_row, column=10, value=hardware['verification_status'])
             if hardware['verification_status'] == 'Verified':
                 verify_cell.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
                 verify_cell.font = Font(color="006100", bold=True)
@@ -1721,16 +1720,16 @@ def export_project_hardware_excel(project, hardware_details_list, total_hardware
         emp_mismatch = sum(1 for h in emp_data['hardware_list'] if h['verification_status'] == 'Mismatch')
         emp_not_entered = total_items - emp_verified - emp_matched - emp_mismatch
         
-        ws_data.merge_cells(f'A{current_row}:E{current_row}')
+        ws_data.merge_cells(f'A{current_row}:D{current_row}')
         summary_label = ws_data.cell(row=current_row, column=1, value=f"📊 Summary for {emp_name}:")
         summary_label.font = Font(bold=True, size=10)
         summary_label.fill = PatternFill(start_color="DDEBF7", end_color="DDEBF7", fill_type="solid")
         
-        ws_data.merge_cells(f'F{current_row}:K{current_row}')
-        summary_value = ws_data.cell(row=current_row, column=6, value=f"Total: {total_items} | Verified: {emp_verified} | Matched: {emp_matched} | Mismatch: {emp_mismatch} | Not Entered: {emp_not_entered}")
+        ws_data.merge_cells(f'E{current_row}:J{current_row}')
+        summary_value = ws_data.cell(row=current_row, column=5, value=f"Total: {total_items} | Verified: {emp_verified} | Matched: {emp_matched} | Mismatch: {emp_mismatch} | Not Entered: {emp_not_entered}")
         summary_value.fill = PatternFill(start_color="DDEBF7", end_color="DDEBF7", fill_type="solid")
         
-        for col in range(1, 12):
+        for col in range(1, 11):
             ws_data.cell(row=current_row, column=col).border = border
         current_row += 1
         
@@ -1738,7 +1737,7 @@ def export_project_hardware_excel(project, hardware_details_list, total_hardware
         current_row += 2
     
     # Enable AutoFilter on the entire data range
-    ws_data.auto_filter.ref = f"A1:K{current_row-1}"
+    ws_data.auto_filter.ref = f"A1:J{current_row-1}"
     
     # Freeze header row
     ws_data.freeze_panes = 'A2'
@@ -1765,7 +1764,6 @@ def export_project_hardware_excel(project, hardware_details_list, total_hardware
         emp_name = hardware['employee_name']
         if emp_name not in employee_summary:
             employee_summary[emp_name] = {
-                'email': hardware['employee_email'],
                 'exam_city': hardware['exam_city'],
                 'exam_center_name': hardware.get('exam_center_name', 'Not specified'),
                 'total': 0,
@@ -1791,8 +1789,8 @@ def export_project_hardware_excel(project, hardware_details_list, total_hardware
         else:
             employee_summary[emp_name]['assigned'] += 1
     
-    # Summary headers - Updated with Exam Center
-    sum_headers = ['S.No', 'Employee Name', 'Email', 'Exam City', 'Exam Center', 'Total Items', 'In Use', 'Assigned', 
+    # Summary headers - Updated without Email
+    sum_headers = ['S.No', 'Employee Name', 'Exam City', 'Exam Center', 'Total Items', 'In Use', 'Assigned', 
                    'Verified', 'Matched', 'Mismatch', 'Not Entered', 'Completion %']
     
     for col, header in enumerate(sum_headers, 1):
@@ -1808,18 +1806,17 @@ def export_project_hardware_excel(project, hardware_details_list, total_hardware
         
         ws_summary.cell(row=row, column=1, value=idx).border = border
         ws_summary.cell(row=row, column=2, value=emp_name).border = border
-        ws_summary.cell(row=row, column=3, value=data['email']).border = border
-        ws_summary.cell(row=row, column=4, value=data['exam_city']).border = border
-        ws_summary.cell(row=row, column=5, value=data['exam_center_name']).border = border
-        ws_summary.cell(row=row, column=6, value=data['total']).border = border
-        ws_summary.cell(row=row, column=7, value=data['in_use']).border = border
-        ws_summary.cell(row=row, column=8, value=data['assigned']).border = border
-        ws_summary.cell(row=row, column=9, value=data['verified']).border = border
-        ws_summary.cell(row=row, column=10, value=data['matched']).border = border
-        ws_summary.cell(row=row, column=11, value=data['mismatch']).border = border
-        ws_summary.cell(row=row, column=12, value=data['not_entered']).border = border
+        ws_summary.cell(row=row, column=3, value=data['exam_city']).border = border
+        ws_summary.cell(row=row, column=4, value=data['exam_center_name']).border = border
+        ws_summary.cell(row=row, column=5, value=data['total']).border = border
+        ws_summary.cell(row=row, column=6, value=data['in_use']).border = border
+        ws_summary.cell(row=row, column=7, value=data['assigned']).border = border
+        ws_summary.cell(row=row, column=8, value=data['verified']).border = border
+        ws_summary.cell(row=row, column=9, value=data['matched']).border = border
+        ws_summary.cell(row=row, column=10, value=data['mismatch']).border = border
+        ws_summary.cell(row=row, column=11, value=data['not_entered']).border = border
         
-        comp_cell = ws_summary.cell(row=row, column=13, value=f"{completion:.1f}%")
+        comp_cell = ws_summary.cell(row=row, column=12, value=f"{completion:.1f}%")
         if completion == 100:
             comp_cell.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
             comp_cell.font = Font(color="006100", bold=True)
@@ -1834,7 +1831,7 @@ def export_project_hardware_excel(project, hardware_details_list, total_hardware
         row += 1
     
     # Enable filter on summary sheet
-    ws_summary.auto_filter.ref = f"A1:M{row-1}"
+    ws_summary.auto_filter.ref = f"A1:L{row-1}"
     ws_summary.freeze_panes = 'A2'
     
     # Auto-adjust column widths
