@@ -3920,10 +3920,11 @@ def export_all_employees_hardware(request):
     return response
 
 
+
 @login_required
 def verify_asset_entry(request, entry_id):
     """
-    Verify a single asset entry
+    Verify a single asset entry and send confirmation email
     """
     if request.user.user_type != 'manager':
         return redirect('employee_dashboard')
@@ -3951,14 +3952,22 @@ def verify_asset_entry(request, entry_id):
         hardware.status = 'in_use'
         hardware.save()
         
-        messages.success(
-            request, 
-            f'Asset entry verified successfully! Asset {asset_entry.entered_asset_number} is now marked as in use.'
-        )
+        # Send verification confirmation email to employee
+        try:
+            send_verification_confirmation_email(asset_entry)
+            messages.success(
+                request, 
+                f'✅ Asset entry verified successfully! Asset {asset_entry.entered_asset_number} is now marked as in use. Email sent to {asset_entry.hardware_item.assignment.employee.email}'
+            )
+        except Exception as e:
+            messages.success(
+                request, 
+                f'✅ Asset entry verified successfully! Asset {asset_entry.entered_asset_number} is now marked as in use. But email could not be sent: {str(e)}'
+            )
     else:
         messages.error(
             request, 
-            f'Cannot verify - Entered asset number "{asset_entry.entered_asset_number}" does not match expected asset number "{expected_asset}"!'
+            f'❌ Cannot verify - Entered asset number "{asset_entry.entered_asset_number}" does not match expected asset number "{expected_asset}"!'
         )
     
     return redirect('view_serial_entries')
