@@ -4170,6 +4170,8 @@ def manager_verification_status(request):
         'today': timezone.now().date(),
     }
     return render(request, 'manager/verification_status.html', context)
+    
+    
 @login_required
 def manager_verification_details(request, assignment_id):
     """Manager view to see detailed verification status for an assignment"""
@@ -4233,6 +4235,26 @@ def manager_verification_details(request, assignment_id):
     verified_count = sum(1 for d in verification_details if d['verified_at'] is not None)
     mismatch_count = sum(1 for d in verification_details if d['entered_asset'] and not d['is_match'])
     pending_count = sum(1 for d in verification_details if not d['entered_asset'])
+    
+    # Handle email sending
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'remind_employee' and pending_count > 0:
+            try:
+                send_reminder_email(assignment, pending_count)
+                messages.success(request, f'Reminder email sent to {assignment.employee.email}')
+            except Exception as e:
+                messages.error(request, f'Failed to send email: {str(e)}')
+        
+        elif action == 'contact_employee' and mismatch_count > 0:
+            try:
+                send_mismatch_email(assignment, mismatch_count)
+                messages.success(request, f'Contact email sent to {assignment.employee.email}')
+            except Exception as e:
+                messages.error(request, f'Failed to send email: {str(e)}')
+        
+        return redirect('manager_verification_details', assignment_id=assignment_id)
     
     context = {
         'assignment': assignment,
