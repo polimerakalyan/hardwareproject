@@ -244,16 +244,22 @@
             <div class="card-body">
                 <div class="d-flex gap-3 flex-wrap">
                     {% if pending_count > 0 %}
-                    <a href="mailto:{{ assignment.employee.email }}?subject=Please%20Enter%20Hardware%20Asset%20Numbers&body=Dear%20{{ assignment.employee.get_full_name|default:assignment.employee.username }}%2C%0A%0APlease%20enter%20the%20asset%20numbers%20for%20your%20assigned%20hardware%20as%20soon%20as%20possible.%0A%0AAssignment%20ID%3A%20{{ assignment.assignment_id }}%0A%0AThank%20you." 
-                       class="btn btn-outline-warning">
-                        <i class="bi bi-envelope me-2"></i>Remind Employee ({{ pending_count }} pending)
-                    </a>
+                    <form method="POST" action="" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="remind_employee">
+                        <button type="submit" class="btn btn-outline-warning">
+                            <i class="bi bi-envelope me-2"></i>Remind Employee ({{ pending_count }} pending)
+                        </button>
+                    </form>
                     {% endif %}
                     {% if mismatch_count > 0 %}
-                    <a href="mailto:{{ assignment.employee.email }}?subject=Asset%20Number%20Mismatch%20Detected&body=Dear%20{{ assignment.employee.get_full_name|default:assignment.employee.username }}%2C%0A%0ASome%20asset%20numbers%20you%20entered%20do%20not%20match%20the%20assigned%20hardware.%20Please%20verify%20the%20physical%20devices%20and%20correct%20the%20entries.%0A%0AAssignment%20ID%3A%20{{ assignment.assignment_id }}%0A%0AThank%20you." 
-                       class="btn btn-outline-danger">
-                        <i class="bi bi-exclamation-triangle me-2"></i>Contact Employee ({{ mismatch_count }} mismatches)
-                    </a>
+                    <form method="POST" action="" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="contact_employee">
+                        <button type="submit" class="btn btn-outline-danger">
+                            <i class="bi bi-exclamation-triangle me-2"></i>Contact Employee ({{ mismatch_count }} mismatches)
+                        </button>
+                    </form>
                     {% endif %}
                 </div>
             </div>
