@@ -4004,10 +4004,11 @@ def verify_serial_entry(request, entry_id):
 
 
 
+
 @login_required
 def verify_all_employee_entries(request, assignment_id):
     """
-    Single click verify all pending asset entries for an employee
+    Single click verify all pending asset entries for an employee and send confirmation email
     """
     if request.user.user_type != 'manager':
         return redirect('employee_dashboard')
@@ -4024,6 +4025,7 @@ def verify_all_employee_entries(request, assignment_id):
     skipped_count = 0
     mismatch_count = 0
     no_entry_count = 0
+    verified_entries = []
     
     for item in items:
         try:
@@ -4043,6 +4045,7 @@ def verify_all_employee_entries(request, assignment_id):
                 item.hardware.status = 'in_use'
                 item.hardware.save()
                 verified_count += 1
+                verified_entries.append(asset_entry)
                 
             elif asset_entry.verified:
                 skipped_count += 1
@@ -4056,12 +4059,19 @@ def verify_all_employee_entries(request, assignment_id):
     
     employee_name = assignment.employee.get_full_name() or assignment.employee.username
     
-    # Build response messages
+    # Send verification confirmation email for all verified entries
     if verified_count > 0:
-        messages.success(
-            request, 
-            f'✅ Successfully verified {verified_count} asset(s) for {employee_name}!'
-        )
+        try:
+            send_bulk_verification_confirmation_email(assignment, verified_entries, verified_count)
+            messages.success(
+                request, 
+                f'✅ Successfully verified {verified_count} asset(s) for {employee_name}! Email sent to {assignment.employee.email}'
+            )
+        except Exception as e:
+            messages.success(
+                request, 
+                f'✅ Successfully verified {verified_count} asset(s) for {employee_name}! But email could not be sent: {str(e)}'
+            )
         
         if mismatch_count > 0:
             messages.warning(
@@ -4102,7 +4112,6 @@ def verify_all_employee_entries(request, assignment_id):
                 f'⚠️ No eligible items found for verification for {employee_name}. Items must have matching asset numbers and not be already verified.'
             )
     
-    # Redirect to the asset entries view
     return redirect('view_serial_entries')
 
 
