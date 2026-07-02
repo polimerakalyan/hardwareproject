@@ -4269,6 +4269,258 @@ def manager_verification_details(request, assignment_id):
     return render(request, 'manager/verification_details.html', context)
 
 
+
+def send_reminder_email(assignment, pending_count):
+    """Send reminder email to employee about pending asset entries"""
+    from django.core.mail import send_mail
+    from django.conf import settings
+    
+    employee = assignment.employee
+    employee_name = employee.get_full_name() or employee.username
+    manager_name = assignment.assigned_by.get_full_name() or assignment.assigned_by.username
+    
+    subject = f'Action Required: Enter Asset Numbers for Assignment {assignment.assignment_id}'
+    
+    html_message = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body {{ font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; }}
+            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+            .header {{ background: linear-gradient(90deg, #E04D00 0%, #FF6B1A 100%); color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }}
+            .content {{ background: #ffffff; padding: 30px; border: 1px solid #e9ecef; border-top: none; border-radius: 0 0 8px 8px; }}
+            .info-box {{ background: #f8f9fa; padding: 15px 20px; margin: 15px 0; border-radius: 6px; border-left: 4px solid #E04D00; }}
+            .alert {{ padding: 12px 16px; border-radius: 6px; margin: 10px 0; }}
+            .alert-warning {{ background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }}
+            .btn {{ display: inline-block; padding: 10px 24px; background: #E04D00; color: white; text-decoration: none; border-radius: 6px; margin: 10px 0; }}
+            .btn:hover {{ background: #c44500; }}
+            .footer {{ margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef; color: #6c757d; font-size: 12px; text-align: center; }}
+            .badge {{ display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; background: #E04D00; color: white; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h2 style="margin: 0;">📋 Asset Entry Reminder</h2>
+            </div>
+            <div class="content">
+                <p>Dear <strong>{employee_name}</strong>,</p>
+                
+                <div class="alert alert-warning">
+                    <strong>⏳ Action Required!</strong> You have <strong>{pending_count}</strong> hardware item(s) pending asset number entry.
+                </div>
+                
+                <div class="info-box">
+                    <h6 style="margin: 0 0 10px 0;">📌 Assignment Details</h6>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                        <tr>
+                            <td style="padding: 4px 0; width: 35%;"><strong>Assignment ID:</strong></td>
+                            <td style="padding: 4px 0;"><code>{assignment.assignment_id}</code></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 4px 0;"><strong>Project:</strong></td>
+                            <td style="padding: 4px 0;">{assignment.project.project_name}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 4px 0;"><strong>Exam City:</strong></td>
+                            <td style="padding: 4px 0;">{assignment.exam_city}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 4px 0;"><strong>Expected Return:</strong></td>
+                            <td style="padding: 4px 0;">{assignment.expected_return_date.strftime('%d %B %Y')}</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <p><strong>Pending Items:</strong> <span class="badge">{pending_count}</span></p>
+                
+                <p><strong>📌 Next Steps:</strong></p>
+                <ol>
+                    <li>Go to the <a href="http://eduquityinventory.co.in/" style="color: #E04D00; text-decoration: none; font-weight: 600;">Eduquity Hardware Portal</a></li>
+                    <li>Navigate to <strong>"My Assignments"</strong> section</li>
+                    <li>Click <strong>"Enter Asset"</strong> to input the Asset Numbers from your physical devices</li>
+                    <li>Your manager will verify the entries</li>
+                </ol>
+                
+                <p style="margin-top: 20px;">
+                    <a href="http://eduquityinventory.co.in/" class="btn">🚀 Go to Portal</a>
+                </p>
+                
+                <div class="footer">
+                    <p><strong>Eduquity Hardware Management Team</strong><br>
+                    Established in 2000 - Thought-leader in the Indian assessment industry</p>
+                    <p style="font-size: 11px;">For any issues, please contact your manager: {manager_name}</p>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    plain_message = f"""
+    ASSET ENTRY REMINDER
+    ====================
+    
+    Dear {employee_name},
+    
+    Action Required! You have {pending_count} hardware item(s) pending asset number entry.
+    
+    Assignment Details:
+    -------------------
+    Assignment ID: {assignment.assignment_id}
+    Project: {assignment.project.project_name}
+    Exam City: {assignment.exam_city}
+    Expected Return: {assignment.expected_return_date.strftime('%d %B %Y')}
+    
+    Pending Items: {pending_count}
+    
+    Next Steps:
+    ----------
+    1. Go to the Eduquity Hardware Portal
+    2. Navigate to "My Assignments" section
+    3. Click "Enter Asset" to input the Asset Numbers from your physical devices
+    4. Your manager will verify the entries
+    
+    ---
+    Eduquity Hardware Management Team
+    """
+    
+    send_mail(
+        subject=subject,
+        message=plain_message,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[employee.email],
+        html_message=html_message,
+        fail_silently=False,
+    )
+
+
+def send_mismatch_email(assignment, mismatch_count):
+    """Send email to employee about asset number mismatches"""
+    from django.core.mail import send_mail
+    from django.conf import settings
+    
+    employee = assignment.employee
+    employee_name = employee.get_full_name() or employee.username
+    manager_name = assignment.assigned_by.get_full_name() or assignment.assigned_by.username
+    
+    subject = f'Asset Number Mismatch Detected - Assignment {assignment.assignment_id}'
+    
+    html_message = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body {{ font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; }}
+            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+            .header {{ background: linear-gradient(90deg, #dc3545 0%, #e74c3c 100%); color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }}
+            .content {{ background: #ffffff; padding: 30px; border: 1px solid #e9ecef; border-top: none; border-radius: 0 0 8px 8px; }}
+            .info-box {{ background: #f8f9fa; padding: 15px 20px; margin: 15px 0; border-radius: 6px; border-left: 4px solid #dc3545; }}
+            .alert {{ padding: 12px 16px; border-radius: 6px; margin: 10px 0; }}
+            .alert-danger {{ background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }}
+            .btn {{ display: inline-block; padding: 10px 24px; background: #E04D00; color: white; text-decoration: none; border-radius: 6px; margin: 10px 0; }}
+            .btn:hover {{ background: #c44500; }}
+            .footer {{ margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef; color: #6c757d; font-size: 12px; text-align: center; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h2 style="margin: 0;">⚠️ Asset Number Mismatch Detected</h2>
+            </div>
+            <div class="content">
+                <p>Dear <strong>{employee_name}</strong>,</p>
+                
+                <div class="alert alert-danger">
+                    <strong>❌ Mismatch Detected!</strong> You have <strong>{mismatch_count}</strong> hardware item(s) with asset number mismatch.
+                </div>
+                
+                <div class="info-box">
+                    <h6 style="margin: 0 0 10px 0;">📌 Assignment Details</h6>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                        <tr>
+                            <td style="padding: 4px 0; width: 35%;"><strong>Assignment ID:</strong></td>
+                            <td style="padding: 4px 0;"><code>{assignment.assignment_id}</code></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 4px 0;"><strong>Project:</strong></td>
+                            <td style="padding: 4px 0;">{assignment.project.project_name}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 4px 0;"><strong>Exam City:</strong></td>
+                            <td style="padding: 4px 0;">{assignment.exam_city}</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <p><strong>Mismatched Items:</strong> <span style="display: inline-block; padding: 4px 12px; border-radius: 20px; font-weight: 600; background: #dc3545; color: white;">{mismatch_count}</span></p>
+                
+                <p><strong>📌 What to Do:</strong></p>
+                <ol>
+                    <li>Verify the physical devices you have</li>
+                    <li>Check the correct Asset Number on each device</li>
+                    <li>Go to <a href="http://eduquityinventory.co.in/" style="color: #E04D00; text-decoration: none; font-weight: 600;">Eduquity Hardware Portal</a></li>
+                    <li>Navigate to <strong>"My Assignments"</strong> section</li>
+                    <li>Click <strong>"Edit"</strong> to correct the entered Asset Numbers</li>
+                    <li>Your manager will verify the updated entries</li>
+                </ol>
+                
+                <p style="margin-top: 20px;">
+                    <a href="http://eduquityinventory.co.in/" class="btn">🚀 Go to Portal</a>
+                </p>
+                
+                <div class="footer">
+                    <p><strong>Eduquity Hardware Management Team</strong><br>
+                    Established in 2000 - Thought-leader in the Indian assessment industry</p>
+                    <p style="font-size: 11px;">For any issues, please contact your manager: {manager_name}</p>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    plain_message = f"""
+    ASSET NUMBER MISMATCH DETECTED
+    ==============================
+    
+    Dear {employee_name},
+    
+    Mismatch Detected! You have {mismatch_count} hardware item(s) with asset number mismatch.
+    
+    Assignment Details:
+    -------------------
+    Assignment ID: {assignment.assignment_id}
+    Project: {assignment.project.project_name}
+    Exam City: {assignment.exam_city}
+    
+    Mismatched Items: {mismatch_count}
+    
+    What to Do:
+    -----------
+    1. Verify the physical devices you have
+    2. Check the correct Asset Number on each device
+    3. Go to the Eduquity Hardware Portal
+    4. Navigate to "My Assignments" section
+    5. Click "Edit" to correct the entered Asset Numbers
+    6. Your manager will verify the updated entries
+    
+    ---
+    Eduquity Hardware Management Team
+    """
+    
+    send_mail(
+        subject=subject,
+        message=plain_message,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[employee.email],
+        html_message=html_message,
+        fail_silently=False,
+    )
+
+
+
 # ============== EMPLOYEE VIEWS ==============
 
 @login_required
