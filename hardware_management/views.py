@@ -4115,6 +4115,412 @@ def verify_all_employee_entries(request, assignment_id):
     return redirect('view_serial_entries')
 
 
+
+def send_verification_confirmation_email(asset_entry):
+    """Send verification confirmation email to employee for a single asset"""
+    from django.core.mail import send_mail
+    from django.conf import settings
+    
+    assignment = asset_entry.hardware_item.assignment
+    employee = assignment.employee
+    hardware = asset_entry.hardware_item.hardware
+    manager = assignment.assigned_by
+    
+    employee_name = employee.get_full_name() or employee.username
+    manager_name = manager.get_full_name() or manager.username
+    
+    subject = f'✅ Hardware Asset Verified - {assignment.project.project_name}'
+    
+    # Get exam center name
+    exam_center_name = getattr(assignment, 'exam_center_name', None)
+    if not exam_center_name:
+        exam_center_name = 'Not specified'
+    
+    # Build hardware list for email - removed Model and Brand
+    hardware_list_html = f"""
+    <tr>
+        <td style="padding: 8px 12px; border-bottom: 1px solid #e9ecef;">{hardware.hardware_type.name}</td>
+        <td style="padding: 8px 12px; border-bottom: 1px solid #e9ecef;"><code style="background: #f8f9fa; padding: 2px 6px; border-radius: 4px;">{asset_entry.entered_asset_number}</code></td>
+        <td style="padding: 8px 12px; border-bottom: 1px solid #e9ecef;"><code style="background: #f8f9fa; padding: 2px 6px; border-radius: 4px;">{hardware.serial_number}</code></td>
+    </tr>
+    """
+    
+    html_message = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body {{ font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; }}
+            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+            .header {{ background: linear-gradient(90deg, #28a745 0%, #20c997 100%); color: white; padding: 25px; text-align: center; border-radius: 8px 8px 0 0; }}
+            .header h2 {{ margin: 0; font-weight: 300; }}
+            .content {{ background: #ffffff; padding: 30px; border: 1px solid #e9ecef; border-top: none; border-radius: 0 0 8px 8px; }}
+            .info-box {{ background: #f8f9fa; padding: 15px 20px; margin: 15px 0; border-radius: 6px; border-left: 4px solid #28a745; }}
+            .info-box h6 {{ margin: 0 0 5px 0; color: #495057; }}
+            .badge {{ display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }}
+            .badge-success {{ background: #28a745; color: white; }}
+            .badge-info {{ background: #17a2b8; color: white; }}
+            .badge-warning {{ background: #ffc107; color: #212529; }}
+            .footer {{ margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef; color: #6c757d; font-size: 12px; text-align: center; }}
+            .btn {{ display: inline-block; padding: 10px 24px; background: #E04D00; color: white; text-decoration: none; border-radius: 6px; margin: 10px 0; }}
+            .btn:hover {{ background: #c44500; }}
+            .alert-success {{ background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 12px 16px; border-radius: 6px; }}
+            .alert-info {{ background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; padding: 12px 16px; border-radius: 6px; }}
+            code {{ background: #f8f9fa; padding: 2px 6px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 13px; }}
+            .table {{ width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 14px; }}
+            .table th {{ background: #f8f9fa; padding: 8px 12px; text-align: left; border-bottom: 2px solid #e9ecef; }}
+            .table td {{ padding: 8px 12px; border-bottom: 1px solid #e9ecef; }}
+            .table tr:last-child td {{ border-bottom: none; }}
+            @media (max-width: 600px) {{
+                .table {{ font-size: 12px; }}
+                .table th, .table td {{ padding: 6px 8px; }}
+                .content {{ padding: 15px; }}
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h2>✅ Hardware Asset Verified!</h2>
+            </div>
+            <div class="content">
+                <p>Dear <strong>{employee_name}</strong>,</p>
+                
+                <div class="alert-success">
+                    <strong>🎉 Congratulations!</strong> Your hardware asset has been successfully verified by your manager.
+                </div>
+                
+                <div class="info-box">
+                    <h6>📌 Verified Asset Details</h6>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Hardware Type</th>
+                                <th>Asset Number</th>
+                                <th>Serial Number</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {hardware_list_html}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="info-box" style="border-left-color: #17a2b8;">
+                    <h6>📌 Assignment Information</h6>
+                    <table>
+                        <tr>
+                            <td width="35%"><strong>Assignment ID:</strong></td>
+                            <td><code>{assignment.assignment_id}</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Project:</strong></td>
+                            <td>{assignment.project.project_name}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Exam City:</strong></td>
+                            <td>{assignment.exam_city or 'Not specified'}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Exam Center:</strong></td>
+                            <td>{exam_center_name}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Expected Return:</strong></td>
+                            <td>{assignment.expected_return_date.strftime('%d %B %Y')}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Verified By:</strong></td>
+                            <td>{manager_name}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Verified On:</strong></td>
+                            <td>{timezone.now().strftime('%d %B %Y %H:%M')}</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <div class="alert-info">
+                    <strong>📌 What's Next:</strong>
+                    <ul style="margin: 8px 0 0 20px;">
+                        <li>This hardware is now marked as <strong>In Use</strong></li>
+                        <li>You can continue using the hardware for your exam duties</li>
+                        <li>Remember to return the hardware by the due date: <strong>{assignment.expected_return_date.strftime('%d %B %Y')}</strong></li>
+                        <li>Keep the hardware safe and in good condition</li>
+                    </ul>
+                </div>
+                
+                <p style="margin-top: 20px;">
+                    <a href="http://eduquityinventory.co.in/" class="btn">🚀 Go to Hardware Portal</a>
+                </p>
+                
+                <div class="footer">
+                    <p><strong>Eduquity Hardware Management Team</strong><br>
+                    Established in 2000 - Thought-leader in the Indian assessment industry</p>
+                    <p style="font-size: 11px;">For any questions, please contact your manager: {manager_name}</p>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    plain_message = f"""
+    HARDWARE ASSET VERIFIED
+    ======================
+    
+    Dear {employee_name},
+    
+    ✅ Your hardware asset has been successfully verified by your manager!
+    
+    Verified Asset Details:
+    -----------------------
+    Hardware Type: {hardware.hardware_type.name}
+    Asset Number: {asset_entry.entered_asset_number}
+    Serial Number: {hardware.serial_number}
+    
+    Assignment Information:
+    -----------------------
+    Assignment ID: {assignment.assignment_id}
+    Project: {assignment.project.project_name}
+    Exam City: {assignment.exam_city or 'Not specified'}
+    Exam Center: {exam_center_name}
+    Expected Return: {assignment.expected_return_date.strftime('%d %B %Y')}
+    Verified By: {manager_name}
+    Verified On: {timezone.now().strftime('%d %B %Y %H:%M')}
+    
+    Next Steps:
+    -----------
+    - This hardware is now marked as In Use
+    - Continue using the hardware for your exam duties
+    - Return the hardware by: {assignment.expected_return_date.strftime('%d %B %Y')}
+    - Keep the hardware safe and in good condition
+    
+    For any questions, please contact your manager: {manager_name}
+    
+    ---
+    Eduquity Hardware Management Team
+    """
+    
+    send_mail(
+        subject=subject,
+        message=plain_message,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[employee.email],
+        html_message=html_message,
+        fail_silently=False,
+    )
+
+
+def send_bulk_verification_confirmation_email(assignment, verified_entries, verified_count):
+    """Send bulk verification confirmation email to employee for multiple assets"""
+    from django.core.mail import send_mail
+    from django.conf import settings
+    
+    employee = assignment.employee
+    manager = assignment.assigned_by
+    
+    employee_name = employee.get_full_name() or employee.username
+    manager_name = manager.get_full_name() or manager.username
+    
+    # Get exam center name
+    exam_center_name = getattr(assignment, 'exam_center_name', None)
+    if not exam_center_name:
+        exam_center_name = 'Not specified'
+    
+    # Build hardware list for email - removed Model and Brand
+    hardware_list_html = ''
+    hardware_list_text = ''
+    
+    for idx, asset_entry in enumerate(verified_entries, 1):
+        hardware = asset_entry.hardware_item.hardware
+        
+        hardware_list_html += f"""
+        <tr>
+            <td style="padding: 8px 12px; border-bottom: 1px solid #e9ecef;">{idx}</td>
+            <td style="padding: 8px 12px; border-bottom: 1px solid #e9ecef;">{hardware.hardware_type.name}</td>
+            <td style="padding: 8px 12px; border-bottom: 1px solid #e9ecef;"><code style="background: #f8f9fa; padding: 2px 6px; border-radius: 4px;">{asset_entry.entered_asset_number}</code></td>
+            <td style="padding: 8px 12px; border-bottom: 1px solid #e9ecef;"><code style="background: #f8f9fa; padding: 2px 6px; border-radius: 4px;">{hardware.serial_number}</code></td>
+        </tr>
+        """
+        hardware_list_text += f"{idx}. {hardware.hardware_type.name} - Asset: {asset_entry.entered_asset_number} | Serial: {hardware.serial_number}\n"
+    
+    subject = f'✅ Hardware Assets Verified - {assignment.project.project_name} ({verified_count} items)'
+    
+    html_message = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body {{ font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; }}
+            .container {{ max-width: 700px; margin: 0 auto; padding: 20px; }}
+            .header {{ background: linear-gradient(90deg, #28a745 0%, #20c997 100%); color: white; padding: 25px; text-align: center; border-radius: 8px 8px 0 0; }}
+            .header h2 {{ margin: 0; font-weight: 300; }}
+            .content {{ background: #ffffff; padding: 30px; border: 1px solid #e9ecef; border-top: none; border-radius: 0 0 8px 8px; }}
+            .info-box {{ background: #f8f9fa; padding: 15px 20px; margin: 15px 0; border-radius: 6px; border-left: 4px solid #28a745; }}
+            .info-box h6 {{ margin: 0 0 5px 0; color: #495057; }}
+            .badge {{ display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }}
+            .badge-success {{ background: #28a745; color: white; }}
+            .badge-info {{ background: #17a2b8; color: white; }}
+            .badge-warning {{ background: #ffc107; color: #212529; }}
+            .footer {{ margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef; color: #6c757d; font-size: 12px; text-align: center; }}
+            .btn {{ display: inline-block; padding: 10px 24px; background: #E04D00; color: white; text-decoration: none; border-radius: 6px; margin: 10px 0; }}
+            .btn:hover {{ background: #c44500; }}
+            .alert-success {{ background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 12px 16px; border-radius: 6px; }}
+            .alert-info {{ background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; padding: 12px 16px; border-radius: 6px; }}
+            code {{ background: #f8f9fa; padding: 2px 6px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 13px; }}
+            .table {{ width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 14px; }}
+            .table th {{ background: #f8f9fa; padding: 8px 12px; text-align: left; border-bottom: 2px solid #2c3e50; color: #2c3e50; }}
+            .table td {{ padding: 8px 12px; border-bottom: 1px solid #e9ecef; }}
+            .table tr:last-child td {{ border-bottom: none; }}
+            @media (max-width: 600px) {{
+                .table {{ font-size: 12px; }}
+                .table th, .table td {{ padding: 6px 8px; }}
+                .content {{ padding: 15px; }}
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h2>✅ Hardware Assets Verified!</h2>
+            </div>
+            <div class="content">
+                <p>Dear <strong>{employee_name}</strong>,</p>
+                
+                <div class="alert-success">
+                    <strong>🎉 Congratulations!</strong> <strong>{verified_count}</strong> of your hardware assets have been successfully verified by your manager.
+                </div>
+                
+                <div class="info-box">
+                    <h6>📌 Verified Assets List</h6>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Hardware Type</th>
+                                <th>Asset Number</th>
+                                <th>Serial Number</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {hardware_list_html}
+                        </tbody>
+                    </table>
+                    <p style="margin-top: 10px;"><span class="badge badge-success">Total: {verified_count} items verified</span></p>
+                </div>
+                
+                <div class="info-box" style="border-left-color: #17a2b8;">
+                    <h6>📌 Assignment Information</h6>
+                    <table>
+                        <tr>
+                            <td width="35%"><strong>Assignment ID:</strong></td>
+                            <td><code>{assignment.assignment_id}</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Project:</strong></td>
+                            <td>{assignment.project.project_name}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Exam City:</strong></td>
+                            <td>{assignment.exam_city or 'Not specified'}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Exam Center:</strong></td>
+                            <td>{exam_center_name}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Expected Return:</strong></td>
+                            <td>{assignment.expected_return_date.strftime('%d %B %Y')}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Verified By:</strong></td>
+                            <td>{manager_name}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Verified On:</strong></td>
+                            <td>{timezone.now().strftime('%d %B %Y %H:%M')}</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <div class="alert-info">
+                    <strong>📌 What's Next:</strong>
+                    <ul style="margin: 8px 0 0 20px;">
+                        <li>All verified hardware is now marked as <strong>In Use</strong></li>
+                        <li>You can continue using the hardware for your exam duties</li>
+                        <li>Remember to return all hardware by the due date: <strong>{assignment.expected_return_date.strftime('%d %B %Y')}</strong></li>
+                        <li>Keep the hardware safe and in good condition</li>
+                    </ul>
+                </div>
+                
+                <p style="margin-top: 20px;">
+                    <a href="http://eduquityinventory.co.in/" class="btn">🚀 Go to Hardware Portal</a>
+                </p>
+                
+                <div class="footer">
+                    <p><strong>Eduquity Hardware Management Team</strong><br>
+                    Established in 2000 - Thought-leader in the Indian assessment industry</p>
+                    <p style="font-size: 11px;">For any questions, please contact your manager: {manager_name}</p>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    plain_message = f"""
+    HARDWARE ASSETS VERIFIED
+    ========================
+    
+    Dear {employee_name},
+    
+    ✅ {verified_count} of your hardware assets have been successfully verified by your manager!
+    
+    Verified Assets:
+    ---------------
+    {hardware_list_text}
+    
+    Total: {verified_count} items verified
+    
+    Assignment Information:
+    -----------------------
+    Assignment ID: {assignment.assignment_id}
+    Project: {assignment.project.project_name}
+    Exam City: {assignment.exam_city or 'Not specified'}
+    Exam Center: {exam_center_name}
+    Expected Return: {assignment.expected_return_date.strftime('%d %B %Y')}
+    Verified By: {manager_name}
+    Verified On: {timezone.now().strftime('%d %B %Y %H:%M')}
+    
+    Next Steps:
+    -----------
+    - All verified hardware is now marked as In Use
+    - Please generate Excel sheet for your verified hardware through your dashbaord
+    - Continue using the hardware for your exam duties
+    - Return all hardware by: {assignment.expected_return_date.strftime('%d %B %Y')}
+    - Keep the hardware safe and in good condition
+    
+    For any questions, please contact your manager: {manager_name}
+    
+    ---
+    Eduquity Hardware Management Team
+    """
+    
+    send_mail(
+        subject=subject,
+        message=plain_message,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[employee.email],
+        html_message=html_message,
+        fail_silently=False,
+    )
+
+
 @login_required
 def manager_verification_status(request):
     """Manager dashboard to see verification status across all assignments"""
