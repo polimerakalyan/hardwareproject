@@ -2,176 +2,234 @@
 {% block title %}My Transfers - Eduquity Hardware Management{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-md-12">
-        <div class="d-flex justify-content-between align-items-center flex-wrap">
+<div class="row mb-3 mb-md-4">
+    <div class="col-12">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div>
-                <h2 class="fw-bold"><i class="bi bi-arrow-left-right text-primary me-2"></i> My Hardware Transfers</h2>
-                <p class="text-muted mb-0">Track your sent and received hardware transfers</p>
+                <h2 class="fw-bold h4 h2-md"><i class="bi bi-arrow-left-right text-primary me-2"></i> My Hardware Transfers</h2>
+                <p class="text-muted mb-0 small small-md">Track your sent and received hardware transfers</p>
             </div>
-            <div class="mt-2 mt-sm-0">
-                <a href="{% url 'request_hardware_transfer' %}" class="btn btn-primary">
-                    <i class="bi bi-plus-circle me-1"></i> Request Transfer
+            <div>
+                <a href="{% url 'request_hardware_transfer' %}" class="btn btn-primary btn-sm btn-md">
+                    <i class="bi bi-plus-circle me-1"></i> <span class="d-none d-sm-inline">Request Transfer</span><span class="d-inline d-sm-none">Request</span>
                 </a>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Summary Statistics Cards -->
-<div class="row g-3 mb-4">
-    <div class="col-md-3 col-sm-6">
-        <div class="stat-card stat-card-primary">
-            <div class="stat-icon">
-                <i class="bi bi-send"></i>
-            </div>
-            <div class="stat-info">
-                <h3 class="stat-value">{{ sent_transfers|length }}</h3>
-                <p class="stat-label">Transfers Sent</p>
-            </div>
-            <div class="stat-progress">
-                <div class="progress-bar" style="width: 100%"></div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3 col-sm-6">
-        <div class="stat-card stat-card-warning">
-            <div class="stat-icon">
-                <i class="bi bi-hourglass-split"></i>
-            </div>
-            <div class="stat-info">
-                <h3 class="stat-value">{{ pending_sent }}</h3>
-                <p class="stat-label">Pending Approval</p>
-            </div>
-            <div class="stat-progress">
-                <div class="progress-bar" style="width: {% widthratio pending_sent sent_transfers|length 100 %}%"></div>
+<!-- Summary Statistics Cards - Responsive -->
+<div class="row g-2 g-md-3 mb-3 mb-md-4">
+    <div class="col-6 col-md-3">
+        <div class="stat-card stat-card-primary p-2 p-md-3">
+            <div class="d-flex align-items-center gap-2 gap-md-3">
+                <div class="stat-icon p-2 p-md-3">
+                    <i class="bi bi-send fs-5 fs-md-3"></i>
+                </div>
+                <div class="stat-info">
+                    <h3 class="stat-value mb-0" style="font-size: 1.2rem;">{{ sent_transfers|length }}</h3>
+                    <p class="stat-label small mb-0 d-none d-sm-block">Transfers Sent</p>
+                    <p class="stat-label small mb-0 d-block d-sm-none">Sent</p>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-3 col-sm-6">
-        <div class="stat-card stat-card-info">
-            <div class="stat-icon">
-                <i class="bi bi-download"></i>
-            </div>
-            <div class="stat-info">
-                <h3 class="stat-value">{{ received_transfers|length }}</h3>
-                <p class="stat-label">Transfers Received</p>
-            </div>
-            <div class="stat-progress">
-                <div class="progress-bar" style="width: 100%"></div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card stat-card-warning p-2 p-md-3">
+            <div class="d-flex align-items-center gap-2 gap-md-3">
+                <div class="stat-icon p-2 p-md-3">
+                    <i class="bi bi-hourglass-split fs-5 fs-md-3"></i>
+                </div>
+                <div class="stat-info">
+                    <h3 class="stat-value mb-0" style="font-size: 1.2rem;">{{ pending_sent }}</h3>
+                    <p class="stat-label small mb-0 d-none d-sm-block">Pending Approval</p>
+                    <p class="stat-label small mb-0 d-block d-sm-none">Pending</p>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-3 col-sm-6">
-        <div class="stat-card stat-card-success">
-            <div class="stat-icon">
-                <i class="bi bi-check-circle"></i>
+    <div class="col-6 col-md-3">
+        <div class="stat-card stat-card-info p-2 p-md-3">
+            <div class="d-flex align-items-center gap-2 gap-md-3">
+                <div class="stat-icon p-2 p-md-3">
+                    <i class="bi bi-download fs-5 fs-md-3"></i>
+                </div>
+                <div class="stat-info">
+                    <h3 class="stat-value mb-0" style="font-size: 1.2rem;">{{ received_transfers|length }}</h3>
+                    <p class="stat-label small mb-0 d-none d-sm-block">Transfers Received</p>
+                    <p class="stat-label small mb-0 d-block d-sm-none">Received</p>
+                </div>
             </div>
-            <div class="stat-info">
-                <h3 class="stat-value">{{ pending_received }}</h3>
-                <p class="stat-label">Awaiting Receipt</p>
-            </div>
-            <div class="stat-progress">
-                <div class="progress-bar" style="width: {% widthratio pending_received received_transfers|length 100 %}%"></div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card stat-card-success p-2 p-md-3">
+            <div class="d-flex align-items-center gap-2 gap-md-3">
+                <div class="stat-icon p-2 p-md-3">
+                    <i class="bi bi-check-circle fs-5 fs-md-3"></i>
+                </div>
+                <div class="stat-info">
+                    <h3 class="stat-value mb-0" style="font-size: 1.2rem;">{{ pending_received }}</h3>
+                    <p class="stat-label small mb-0 d-none d-sm-block">Awaiting Receipt</p>
+                    <p class="stat-label small mb-0 d-block d-sm-none">Awaiting</p>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <!-- Sent Transfers -->
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-header bg-primary text-white">
-        <h5 class="mb-0"><i class="bi bi-send"></i> Transfers Sent by You</h5>
+<div class="card border-0 shadow-sm mb-3 mb-md-4">
+    <div class="card-header bg-primary text-white py-2 py-md-3">
+        <h5 class="mb-0 small small-md"><i class="bi bi-send"></i> Transfers Sent by You</h5>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Transfer ID</th>
-                        <!-- <th>Hardware</th> -->
-                        <th>To Employee</th>
-                        <th>To Location</th>
-                        <th>Type</th>
-                        <th>Status</th>
-                        <th>Requested Date</th>
-                        <th>Actions</th>
+                        <th class="px-2 px-md-3 py-2">Transfer ID</th>
+                        <th class="px-2 px-md-3 py-2 d-none d-sm-table-cell">To Employee</th>
+                        <th class="px-2 px-md-3 py-2 d-none d-md-table-cell">To Location</th>
+                        <th class="px-2 px-md-3 py-2 d-none d-lg-table-cell">Type</th>
+                        <th class="px-2 px-md-3 py-2">Status</th>
+                        <th class="px-2 px-md-3 py-2 d-none d-xl-table-cell">Requested Date</th>
+                        <th class="px-2 px-md-3 py-2 text-center" style="min-width: 60px;">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for transfer in sent_transfers %}
                     <tr>
-                        <td><strong>{{ transfer.transfer_id }}</strong></td>
-                        <!-- <td>{{ transfer.hardware_item.hardware_type.name }}<br><small>{{ transfer.hardware_item.serial_number }}</small></td> -->
-                        <td>{{ transfer.to_employee.get_full_name|default:transfer.to_employee.username }}</td>
-                        <td>{{ transfer.to_exam_city }}</td>
-                        <td>
+                        <td class="px-2 px-md-3 py-2"><strong class="small">{{ transfer.transfer_id|truncatechars:10 }}</strong></td>
+                        <td class="px-2 px-md-3 py-2 d-none d-sm-table-cell small">{{ transfer.to_employee.get_full_name|default:transfer.to_employee.username|truncatechars:15 }}</td>
+                        <td class="px-2 px-md-3 py-2 d-none d-md-table-cell small">{{ transfer.to_exam_city|truncatechars:12 }}</td>
+                        <td class="px-2 px-md-3 py-2 d-none d-lg-table-cell">
                             {% if transfer.transfer_type == 'temporary' %}
-                                <span class="badge bg-info">Temporary</span>
+                                <span class="badge bg-info" style="font-size: 0.6rem;">Temp</span>
                             {% else %}
-                                <span class="badge bg-success">Permanent</span>
+                                <span class="badge bg-success" style="font-size: 0.6rem;">Perm</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td class="px-2 px-md-3 py-2">
                             {% if transfer.status == 'requested' %}
-                                <span class="badge bg-warning">Pending Approval</span>
+                                <span class="badge bg-warning" style="font-size: 0.6rem;">Pending</span>
                             {% elif transfer.status == 'approved_by_manager' %}
-                                <span class="badge bg-info">Approved</span>
+                                <span class="badge bg-info" style="font-size: 0.6rem;">Approved</span>
                             {% elif transfer.status == 'in_transit' %}
-                                <span class="badge bg-primary">In Transit</span>
+                                <span class="badge bg-primary" style="font-size: 0.6rem;">In Transit</span>
                             {% elif transfer.status == 'received_by_receiver' %}
-                                <span class="badge bg-secondary">Received</span>
+                                <span class="badge bg-secondary" style="font-size: 0.6rem;">Received</span>
                             {% elif transfer.status == 'return_completed' %}
-                                <span class="badge bg-purple" style="background-color: purple;">Returned</span>
+                                <span class="badge" style="background-color: purple; color: white; font-size: 0.6rem;">Returned</span>
                             {% elif transfer.status == 'completed' %}
-                                <span class="badge bg-success">Completed</span>
+                                <span class="badge bg-success" style="font-size: 0.6rem;">Completed</span>
                             {% elif transfer.status == 'rejected' %}
-                                <span class="badge bg-danger">Rejected</span>
+                                <span class="badge bg-danger" style="font-size: 0.6rem;">Rejected</span>
                             {% elif transfer.status == 'cancelled' %}
-                                <span class="badge bg-dark">Cancelled</span>
+                                <span class="badge bg-dark" style="font-size: 0.6rem;">Cancelled</span>
                             {% endif %}
                         </td>
-                        <td>{{ transfer.requested_date|date:"d/m/Y" }}</td>
-                        <td>
-                            <a href="{% url 'transfer_tracking' transfer.id %}" class="btn btn-sm btn-outline-info">
-                                <i class="bi bi-eye"></i> Track
-                            </a>
-                            {% if transfer.status == 'approved_by_manager' %}
-                            <a href="#" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#initiateModal{{ transfer.id }}">
-                                <i class="bi bi-send"></i> Initiate
-                            </a>
-                            {% endif %}
+                        <td class="px-2 px-md-3 py-2 d-none d-xl-table-cell small">{{ transfer.requested_date|date:"d/m/Y" }}</td>
+                        <td class="px-2 px-md-3 py-2 text-center">
+                            <div class="d-flex gap-1 justify-content-center flex-wrap">
+                                <a href="{% url 'transfer_tracking' transfer.id %}" class="btn btn-sm btn-outline-info px-2 py-1" style="font-size: 0.65rem;">
+                                    <i class="bi bi-eye"></i> <span class="d-none d-sm-inline">Track</span>
+                                </a>
+                                {% if transfer.status == 'approved_by_manager' %}
+                                <a href="#" class="btn btn-sm btn-success px-2 py-1" style="font-size: 0.65rem;" data-bs-toggle="modal" data-bs-target="#initiateModal{{ transfer.id }}">
+                                    <i class="bi bi-send"></i> <span class="d-none d-sm-inline">Initiate</span>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Mobile Card View for Sent Transfers -->
+                    <tr class="d-sm-none">
+                        <td colspan="7" class="p-0">
+                            <div class="card m-2 shadow-sm">
+                                <div class="card-body p-2">
+                                    <div class="d-flex justify-content-between align-items-start mb-1">
+                                        <div>
+                                            <strong class="small">{{ transfer.transfer_id|truncatechars:12 }}</strong>
+                                            <br>
+                                            <small class="text-muted">To: {{ transfer.to_employee.get_full_name|default:transfer.to_employee.username|truncatechars:15 }}</small>
+                                        </div>
+                                        <div>
+                                            {% if transfer.status == 'requested' %}
+                                                <span class="badge bg-warning" style="font-size: 0.55rem;">Pending</span>
+                                            {% elif transfer.status == 'completed' %}
+                                                <span class="badge bg-success" style="font-size: 0.55rem;">Completed</span>
+                                            {% elif transfer.status == 'in_transit' %}
+                                                <span class="badge bg-primary" style="font-size: 0.55rem;">In Transit</span>
+                                            {% elif transfer.status == 'rejected' %}
+                                                <span class="badge bg-danger" style="font-size: 0.55rem;">Rejected</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary" style="font-size: 0.55rem;">{{ transfer.get_status_display }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="row g-1 small">
+                                        <div class="col-6">
+                                            <span class="text-muted">Location:</span>
+                                            <span class="small">{{ transfer.to_exam_city|truncatechars:12 }}</span>
+                                        </div>
+                                        <div class="col-6">
+                                            <span class="text-muted">Type:</span>
+                                            {% if transfer.transfer_type == 'temporary' %}
+                                                <span class="badge bg-info" style="font-size: 0.55rem;">Temporary</span>
+                                            {% else %}
+                                                <span class="badge bg-success" style="font-size: 0.55rem;">Permanent</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-6">
+                                            <span class="text-muted">Requested:</span>
+                                            <span class="small">{{ transfer.requested_date|date:"d/m/Y" }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2 pt-1 border-top d-flex gap-1">
+                                        <a href="{% url 'transfer_tracking' transfer.id %}" class="btn btn-sm btn-outline-info flex-grow-1" style="font-size: 0.7rem;">
+                                            <i class="bi bi-eye"></i> Track
+                                        </a>
+                                        {% if transfer.status == 'approved_by_manager' %}
+                                        <a href="#" class="btn btn-sm btn-success flex-grow-1" style="font-size: 0.7rem;" data-bs-toggle="modal" data-bs-target="#initiateModal{{ transfer.id }}">
+                                            <i class="bi bi-send"></i> Initiate
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
                         </td>
                     </tr>
                     
                     <!-- Initiate Transfer Modal -->
                     <div class="modal fade" id="initiateModal{{ transfer.id }}" tabindex="-1">
-                        <div class="modal-dialog">
+                        <div class="modal-dialog modal-dialog-centered">
                             <div class="modal-content">
                                 <form method="POST" action="{% url 'update_transfer_status_employee' transfer.id %}">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="initiate">
-                                    <div class="modal-header bg-success text-white">
-                                        <h5 class="modal-title">Initiate Transfer</h5>
+                                    <div class="modal-header bg-success text-white py-2 py-md-3">
+                                        <h5 class="modal-title small">Initiate Transfer</h5>
                                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                     </div>
-                                    <div class="modal-body">
-                                        <p>You are about to initiate transfer of <strong>{{ transfer.hardware_item.serial_number }}</strong> to <strong>{{ transfer.to_employee.get_full_name }}</strong>.</p>
+                                    <div class="modal-body p-3 p-md-4">
+                                        <p class="small">You are about to initiate transfer to <strong>{{ transfer.to_employee.get_full_name }}</strong>.</p>
                                         <div class="mb-3">
-                                            <label class="form-label">Condition of Hardware</label>
-                                            <textarea name="notes" class="form-control" rows="3" placeholder="Describe current condition of the hardware before sending..."></textarea>
+                                            <label class="form-label small">Condition of Hardware</label>
+                                            <textarea name="notes" class="form-control" rows="3" placeholder="Describe current condition..." style="font-size: 0.85rem;"></textarea>
                                         </div>
                                     </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                        <button type="submit" class="btn btn-success">Confirm Initiate</button>
+                                    <div class="modal-footer p-2 p-md-3">
+                                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                                        <button type="submit" class="btn btn-success btn-sm">Confirm Initiate</button>
                                     </div>
                                 </form>
                             </div>
                         </div>
                     </div>
                     {% empty %}
-                    <tr><td colspan="8" class="text-center py-4">No transfers sent yet</td></tr>
+                    <tr><td colspan="7" class="text-center py-4 small">No transfers sent yet</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -181,105 +239,171 @@
 
 <!-- Received Transfers -->
 <div class="card border-0 shadow-sm">
-    <div class="card-header bg-success text-white">
-        <h5 class="mb-0"><i class="bi bi-download"></i> Transfers Received by You</h5>
+    <div class="card-header bg-success text-white py-2 py-md-3">
+        <h5 class="mb-0 small small-md"><i class="bi bi-download"></i> Transfers Received by You</h5>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Transfer ID</th>
-                        <!-- <th>Hardware</th> -->
-                        <th>From Employee</th>
-                        <th>From Location</th>
-                        <th>Type</th>
-                        <th>Status</th>
-                        <th>Expected Arrival</th>
-                        <th>Actions</th>
+                        <th class="px-2 px-md-3 py-2">Transfer ID</th>
+                        <th class="px-2 px-md-3 py-2 d-none d-sm-table-cell">From Employee</th>
+                        <th class="px-2 px-md-3 py-2 d-none d-md-table-cell">From Location</th>
+                        <th class="px-2 px-md-3 py-2 d-none d-lg-table-cell">Type</th>
+                        <th class="px-2 px-md-3 py-2">Status</th>
+                        <th class="px-2 px-md-3 py-2 d-none d-xl-table-cell">Expected Arrival</th>
+                        <th class="px-2 px-md-3 py-2 text-center" style="min-width: 60px;">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for transfer in received_transfers %}
                     <tr>
-                        <td><strong>{{ transfer.transfer_id }}</strong></td>
-                        <!-- <td>{{ transfer.hardware_item.hardware_type.name }}<br><small>{{ transfer.hardware_item.serial_number }}</small></td> -->
-                        <td>{{ transfer.from_employee.get_full_name|default:transfer.from_employee.username }}</td>
-                        <td>{{ transfer.from_exam_city }}</td>
-                        <td>
+                        <td class="px-2 px-md-3 py-2"><strong class="small">{{ transfer.transfer_id|truncatechars:10 }}</strong></td>
+                        <td class="px-2 px-md-3 py-2 d-none d-sm-table-cell small">{{ transfer.from_employee.get_full_name|default:transfer.from_employee.username|truncatechars:15 }}</td>
+                        <td class="px-2 px-md-3 py-2 d-none d-md-table-cell small">{{ transfer.from_exam_city|truncatechars:12 }}</td>
+                        <td class="px-2 px-md-3 py-2 d-none d-lg-table-cell">
                             {% if transfer.transfer_type == 'temporary' %}
-                                <span class="badge bg-info">Temporary</span>
+                                <span class="badge bg-info" style="font-size: 0.6rem;">Temp</span>
                             {% else %}
-                                <span class="badge bg-success">Permanent</span>
+                                <span class="badge bg-success" style="font-size: 0.6rem;">Perm</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td class="px-2 px-md-3 py-2">
                             {% if transfer.status == 'in_transit' %}
-                                <span class="badge bg-primary">In Transit</span>
+                                <span class="badge bg-primary" style="font-size: 0.6rem;">In Transit</span>
                             {% elif transfer.status == 'received_by_receiver' %}
-                                <span class="badge bg-success">Received</span>
+                                <span class="badge bg-success" style="font-size: 0.6rem;">Received</span>
                             {% elif transfer.status == 'completed' %}
-                                <span class="badge bg-success">Completed</span>
+                                <span class="badge bg-success" style="font-size: 0.6rem;">Completed</span>
+                            {% elif transfer.status == 'return_completed' %}
+                                <span class="badge" style="background-color: purple; color: white; font-size: 0.6rem;">Returned</span>
+                            {% else %}
+                                <span class="badge bg-secondary" style="font-size: 0.6rem;">{{ transfer.get_status_display }}</span>
                             {% endif %}
                         </td>
-                        <td>{{ transfer.expected_arrival_date|date:"d/m/Y" }}</td>
-                        <td>
-                            <a href="{% url 'transfer_tracking' transfer.id %}" class="btn btn-sm btn-outline-info">
-                                <i class="bi bi-eye"></i> Track
-                            </a>
-                            {% if transfer.status == 'in_transit' %}
-                            <a href="#" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#receiveModal{{ transfer.id }}">
-                                <i class="bi bi-check-circle"></i> Confirm Receipt
-                            </a>
-                            {% endif %}
+                        <td class="px-2 px-md-3 py-2 d-none d-xl-table-cell small">{{ transfer.expected_arrival_date|date:"d/m/Y" }}</td>
+                        <td class="px-2 px-md-3 py-2 text-center">
+                            <div class="d-flex gap-1 justify-content-center flex-wrap">
+                                <a href="{% url 'transfer_tracking' transfer.id %}" class="btn btn-sm btn-outline-info px-2 py-1" style="font-size: 0.65rem;">
+                                    <i class="bi bi-eye"></i> <span class="d-none d-sm-inline">Track</span>
+                                </a>
+                                {% if transfer.status == 'in_transit' %}
+                                <a href="#" class="btn btn-sm btn-success px-2 py-1" style="font-size: 0.65rem;" data-bs-toggle="modal" data-bs-target="#receiveModal{{ transfer.id }}">
+                                    <i class="bi bi-check-circle"></i> <span class="d-none d-sm-inline">Confirm</span>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Mobile Card View for Received Transfers -->
+                    <tr class="d-sm-none">
+                        <td colspan="7" class="p-0">
+                            <div class="card m-2 shadow-sm">
+                                <div class="card-body p-2">
+                                    <div class="d-flex justify-content-between align-items-start mb-1">
+                                        <div>
+                                            <strong class="small">{{ transfer.transfer_id|truncatechars:12 }}</strong>
+                                            <br>
+                                            <small class="text-muted">From: {{ transfer.from_employee.get_full_name|default:transfer.from_employee.username|truncatechars:15 }}</small>
+                                        </div>
+                                        <div>
+                                            {% if transfer.status == 'in_transit' %}
+                                                <span class="badge bg-primary" style="font-size: 0.55rem;">In Transit</span>
+                                            {% elif transfer.status == 'completed' %}
+                                                <span class="badge bg-success" style="font-size: 0.55rem;">Completed</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary" style="font-size: 0.55rem;">{{ transfer.get_status_display }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="row g-1 small">
+                                        <div class="col-6">
+                                            <span class="text-muted">Location:</span>
+                                            <span class="small">{{ transfer.from_exam_city|truncatechars:12 }}</span>
+                                        </div>
+                                        <div class="col-6">
+                                            <span class="text-muted">Type:</span>
+                                            {% if transfer.transfer_type == 'temporary' %}
+                                                <span class="badge bg-info" style="font-size: 0.55rem;">Temporary</span>
+                                            {% else %}
+                                                <span class="badge bg-success" style="font-size: 0.55rem;">Permanent</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-6">
+                                            <span class="text-muted">Arrival:</span>
+                                            <span class="small">{{ transfer.expected_arrival_date|date:"d/m/Y" }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2 pt-1 border-top d-flex gap-1">
+                                        <a href="{% url 'transfer_tracking' transfer.id %}" class="btn btn-sm btn-outline-info flex-grow-1" style="font-size: 0.7rem;">
+                                            <i class="bi bi-eye"></i> Track
+                                        </a>
+                                        {% if transfer.status == 'in_transit' %}
+                                        <a href="#" class="btn btn-sm btn-success flex-grow-1" style="font-size: 0.7rem;" data-bs-toggle="modal" data-bs-target="#receiveModal{{ transfer.id }}">
+                                            <i class="bi bi-check-circle"></i> Confirm
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
                         </td>
                     </tr>
                     
                     <!-- Confirm Receipt Modal -->
                     <div class="modal fade" id="receiveModal{{ transfer.id }}" tabindex="-1">
-                        <div class="modal-dialog">
+                        <div class="modal-dialog modal-dialog-centered">
                             <div class="modal-content">
                                 <form method="POST" action="{% url 'update_transfer_status_employee' transfer.id %}">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="receive">
-                                    <div class="modal-header bg-success text-white">
-                                        <h5 class="modal-title">Confirm Hardware Receipt</h5>
+                                    <div class="modal-header bg-success text-white py-2 py-md-3">
+                                        <h5 class="modal-title small">Confirm Hardware Receipt</h5>
                                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                     </div>
-                                    <div class="modal-body">
-                                        <p>Have you received <strong>{{ transfer.hardware_item.serial_number }}</strong> from <strong>{{ transfer.from_employee.get_full_name }}</strong>?</p>
+                                    <div class="modal-body p-3 p-md-4">
+                                        <p class="small">Have you received hardware from <strong>{{ transfer.from_employee.get_full_name }}</strong>?</p>
                                         <div class="mb-3">
-                                            <label class="form-label">Condition of Hardware Received</label>
-                                            <textarea name="notes" class="form-control" rows="3" placeholder="Describe condition of the hardware received..."></textarea>
+                                            <label class="form-label small">Condition of Hardware Received</label>
+                                            <textarea name="notes" class="form-control" rows="3" placeholder="Describe condition..." style="font-size: 0.85rem;"></textarea>
                                         </div>
                                     </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                        <button type="submit" class="btn btn-success">Confirm Receipt</button>
+                                    <div class="modal-footer p-2 p-md-3">
+                                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                                        <button type="submit" class="btn btn-success btn-sm">Confirm Receipt</button>
                                     </div>
                                 </form>
                             </div>
                         </div>
                     </div>
                     {% empty %}
-                    <tr><td colspan="8" class="text-center py-4">No transfers received yet</td></tr>
+                    <tr><td colspan="7" class="text-center py-4 small">No transfers received yet</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
 </div>
+
 <style>
-    /* Stat Cards */
+    /* Stat Cards - Mobile Responsive */
     .stat-card {
         background: white;
-        border-radius: 16px;
-        padding: 20px;
+        border-radius: 12px;
+        padding: 12px;
         position: relative;
         overflow: hidden;
         transition: all 0.3s ease;
         border: 1px solid rgba(0,0,0,0.05);
         box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        height: 100%;
+    }
+    
+    @media (min-width: 768px) {
+        .stat-card {
+            padding: 20px;
+        }
     }
     
     .stat-card:hover {
@@ -288,14 +412,22 @@
     }
     
     .stat-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 12px;
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 24px;
-        margin-bottom: 12px;
+        font-size: 18px;
+        flex-shrink: 0;
+    }
+    
+    @media (min-width: 768px) {
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            font-size: 24px;
+        }
     }
     
     .stat-card-primary .stat-icon {
@@ -319,15 +451,27 @@
     }
     
     .stat-value {
-        font-size: 28px;
+        font-size: 1.2rem;
         font-weight: 700;
-        margin-bottom: 4px;
+        margin-bottom: 0;
+    }
+    
+    @media (min-width: 768px) {
+        .stat-value {
+            font-size: 28px;
+        }
     }
     
     .stat-label {
-        font-size: 13px;
+        font-size: 0.65rem;
         color: #6c757d;
         margin-bottom: 0;
+    }
+    
+    @media (min-width: 768px) {
+        .stat-label {
+            font-size: 0.75rem;
+        }
     }
     
     .stat-progress {
@@ -349,38 +493,138 @@
     .stat-card-info .progress-bar { background: #0dcaf0; }
     .stat-card-success .progress-bar { background: #198754; }
     
-    /* Card Headers */
-    .bg-gradient-primary {
-        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
-    }
-    
-    .bg-gradient-success {
-        background: linear-gradient(135deg, #198754 0%, #157347 100%);
-    }
-    
-    /* Table Styling */
+    /* Table Responsive */
     .table th {
         font-weight: 600;
-        font-size: 0.75rem;
+        font-size: 0.6rem;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.3px;
         color: #6c757d;
         border-bottom: 1px solid #e9ecef;
+        padding: 0.4rem 0.25rem;
+    }
+    
+    @media (min-width: 768px) {
+        .table th {
+            font-size: 0.75rem;
+            padding: 0.75rem 0.5rem;
+        }
     }
     
     .table td {
         vertical-align: middle;
-        padding: 16px 8px;
+        padding: 0.4rem 0.25rem;
+        font-size: 0.75rem;
+    }
+    
+    @media (min-width: 768px) {
+        .table td {
+            padding: 16px 8px;
+            font-size: 0.85rem;
+        }
+    }
+    
+    /* Mobile Card Styles */
+    .card.m-2 {
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    .card.m-2 .card-body {
+        padding: 0.75rem;
+    }
+    
+    /* Responsive Typography */
+    .small-md {
         font-size: 0.85rem;
     }
     
-    /* Badge Opacity Styles */
-    .bg-opacity-10 {
-        --bs-bg-opacity: 0.1;
+    @media (min-width: 768px) {
+        .small-md {
+            font-size: 1rem;
+        }
     }
     
-    .badge.bg-opacity-10 {
-        backdrop-filter: blur(4px);
+    .h2-md {
+        font-size: 1.25rem;
+    }
+    
+    @media (min-width: 768px) {
+        .h2-md {
+            font-size: 2rem;
+        }
+    }
+    
+    .fs-md-3 {
+        font-size: 1.1rem;
+    }
+    
+    @media (min-width: 768px) {
+        .fs-md-3 {
+            font-size: 1.5rem;
+        }
+    }
+    
+    /* Badge Responsive */
+    .badge {
+        font-weight: 500;
+        border-radius: 20px;
+        padding: 0.2rem 0.4rem;
+        font-size: 0.55rem;
+    }
+    
+    @media (min-width: 768px) {
+        .badge {
+            padding: 0.35rem 0.65rem;
+            font-size: 0.75rem;
+        }
+    }
+    
+    /* Buttons Responsive */
+    .btn-sm {
+        padding: 0.2rem 0.4rem;
+        font-size: 0.6rem;
+    }
+    
+    @media (min-width: 768px) {
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+    }
+    
+    /* Modal Responsive */
+    .modal-body {
+        padding: 1rem;
+    }
+    
+    @media (min-width: 768px) {
+        .modal-body {
+            padding: 1.5rem;
+        }
+    }
+    
+    .modal-header {
+        padding: 0.75rem 1rem;
+    }
+    
+    @media (min-width: 768px) {
+        .modal-header {
+            padding: 1rem 1.5rem;
+        }
+    }
+    
+    /* Touch-friendly */
+    @media (max-width: 576px) {
+        .btn {
+            font-size: 0.7rem;
+            padding: 0.3rem 0.6rem;
+        }
+        
+        .table-responsive {
+            -webkit-overflow-scrolling: touch;
+        }
     }
     
     /* Empty State */
@@ -393,29 +637,13 @@
         background-color: #f8f9fa;
         padding: 2px 6px;
         border-radius: 4px;
-        font-size: 0.8rem;
+        font-size: 0.7rem;
         font-family: monospace;
     }
     
-    /* Responsive */
-    @media (max-width: 768px) {
-        .stat-card {
-            padding: 15px;
-        }
-        .stat-value {
-            font-size: 22px;
-        }
-        .stat-icon {
-            width: 40px;
-            height: 40px;
-            font-size: 20px;
-        }
-        .table th, .table td {
-            padding: 10px 8px;
-            font-size: 0.75rem;
-        }
-        .btn-group .btn {
-            padding: 0.25rem 0.5rem;
+    @media (min-width: 768px) {
+        code {
+            font-size: 0.8rem;
         }
     }
     
